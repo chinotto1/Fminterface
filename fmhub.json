@@ -1,0 +1,6 @@
+{
+  "what": "USB audio interface and Bluetooth receiver with a MIDI sequencer, arpeggiator and retrospective capture",
+  "author": "Fminterface",
+  "kinds": ["other"],
+  "image": "assets/github/mixer.png"
+}
