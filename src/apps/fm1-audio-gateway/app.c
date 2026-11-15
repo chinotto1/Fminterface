@@ -231,6 +231,10 @@ static void gateway_lights(void)
         dim_keys=GATEWAY_MIDI_KEYS & ~keys;
     }else if((gateway_screen==GATEWAY_SEQ || gateway_screen==GATEWAY_ARP) && !gateway_midi_active){
         keys=gateway_keys & GATEWAY_MIDI_KEYS;
+        {
+            int lit=mus_ui_lit_key();
+            if(lit>=0)keys|=1u<<(unsigned)lit;
+        }
         dim_keys=GATEWAY_MIDI_KEYS & ~keys;
         {
             uint32_t oct=(1u<<B_OCTDN)|(1u<<B_OCTUP);
@@ -767,6 +771,7 @@ void app_input_only(void)
             }
             mus_ui_edit=mus_ui_edit_done=0;
         }
+        mus_ui_seq_down=(buttons&(1u<<B_SEQ))?1:0;
         for(unsigned key=0;key<27u;key++){
             if(gateway_screen==GATEWAY_SEQ){
                 if(key_pressed&(1u<<key))mus_ui_key(key,1);

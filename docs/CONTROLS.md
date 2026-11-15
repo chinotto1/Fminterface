@@ -29,11 +29,11 @@ SEQ opens NOTES, the piano roll. Press SEQ again for STEPS, PATTERN, then TEMPO,
 
 The roll shows 16 steps. PATTERN sets the loop to 1, 2 or 4 bars, which is 16, 32 or 64 steps at the current division. STEPS shows all four bars. A bar is 16 steps.
 
-On NOTES and STEPS, with the sequence stopped, play a key or a chord on the cursor step. Releasing the last key advances the cursor. PRESETS or K1 walks steps, including empty ones; while a key is held, either one lengthens that note and the cursor moves past it. K2 changes the pitch of the notes on the step, or scrolls the roll when the step is empty. K3 changes their length. A short EDIT clears the cursor step. Hold SEQ and press OCT− to clear every track; the bar length and tempo stay, and hold EDIT to put the notes back. While the sequence is playing, the keys only play.
+On NOTES and STEPS, with the sequence stopped, play a key or a chord on the cursor step. Releasing the last key advances the cursor. PRESETS or K1 walks steps, including empty ones; while a key is held, either one lengthens that note and the cursor moves past it. On STEPS, SELECT moves a bar at a time. The keyboard under the steps, and the matching key, show that step's note. Hold SEQ and play a key to change it. K2 changes the pitch of the notes on the step, or scrolls the roll when the step is empty. K3 changes their length. A short EDIT clears the cursor step. Hold SEQ and press OCT− to clear every track; the bar length and tempo stay, and hold EDIT to put the notes back. While the sequence is playing, the keys only play.
 
 PATTERN: K1 or PRESETS sets 1, 2 or 4 bars, K2 the division, K3 the gate. TEMPO: K1 is BPM from 40 to 240, K2 swing, K3 gate. SELECT chooses one of four MIDI tracks on every page. ALGORITHM sets the arpeggiator to OFF, UP, DN, UPDN, RND, ORD or REPEAT. SEL toggles arpeggiator hold. OCT− and OCT+ shift the keys by octaves, and both together reset.
 
-On PATTERN, TEMPO and ARP the keys play freely, which is where a stopped empty pattern takes its timing. On the arp page, ALGO is the mode, K1 the rate, K2 the octave range (1–4) and K3 the gate.
+On PATTERN, TEMPO and ARP the keys play freely, which is where a stopped empty pattern takes its timing. On the arp page the four knobs are the four settings: K1 mode, K2 rate, K3 octaves and K4 gate. Modes are OFF, UP, DN, UPDN, RND, ORD, REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK and CHORD. SELECT still chooses the track. SEL toggles hold.
 
 Track 1 sends on the Settings MIDI channel. Tracks 2–4 use the following channels. USB MIDI has to be connected for the notes to leave the FM-1.
 

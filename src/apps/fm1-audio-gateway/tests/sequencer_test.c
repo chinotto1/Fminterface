@@ -103,6 +103,22 @@ int main(void)
         assert(!strcmp(mus_message(),"CLEAR UNDONE"));
         assert(mus_count(0)==1 && mus_count(1)==1 && mus.len[0]==64);
     }
+    mus_ui_page=1;
+    mus_length(64);
+    mus_ui_cursor=2;
+    enc_acc[EN_SELECT]=1;app_input_only();
+    assert(mus_ui_cursor==18 && mus.sel==0 && mus_ui_page==1);
+    mus_step_put(0,18,60,100,MUS_UNIT);
+    held_btn=1u<<B_SEQ;app_input_only();
+    held_keys=1u<<4;app_input_only();
+    {
+        uint8_t p=0;
+        assert(mus_step_pitch(0,18,&p) && p==57 && mus_ui_cursor==18);
+    }
+    held_keys=0;app_input_only();
+    assert(mus_ui_cursor==18);
+    held_btn=0;app_input_only();
+    assert(mus_ui_page==1 && gateway_screen==GATEWAY_SEQ);
     puts("PASS: piano roll, 4-bar step entry, nightly free-take, undo, arp, SEQ+OCT- clear");
     return 0;
 }

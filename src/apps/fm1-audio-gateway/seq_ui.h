@@ -9,11 +9,11 @@
  * empty pattern can still take the Melodee nightly 3fe570d free timing. */
 #include "music.h"
 static int8_t mus_ui_oct;
-static uint8_t mus_ui_page, mus_ui_cursor, mus_ui_held, mus_ui_span = 1, mus_ui_lo = 48, mus_ui_seq_arm;
+static uint8_t mus_ui_page, mus_ui_cursor, mus_ui_held, mus_ui_span = 1, mus_ui_lo = 48, mus_ui_seq_arm, mus_ui_seq_down, mus_ui_retune;
 static uint8_t mus_ui_on[27], mus_ui_pitch[27];
 static uint32_t mus_ui_edit_ms, mus_ui_seen;
 static uint8_t mus_ui_rec, mus_ui_rec_done, mus_ui_edit, mus_ui_edit_done;
-static const char *const mus_ui_modes[] = {"OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT"};
+static const char *const mus_ui_modes[] = {"OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT", "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD"};
 static const char *const mus_ui_divs[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR"};
 static const uint8_t mus_ui_black[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 enum { MUS_UI_NOTE = 0, MUS_UI_STEPS = 1, MUS_UI_PATTERN = 2, MUS_UI_TEMPO = 3 };
@@ -183,7 +183,7 @@ static void mus_ui_arp_knob(int dir)
 {
     int m = (int)mus.arp + dir;
     if (m < 0) m = 0;
-    if (m > 6) m = 6;
+    if (m > 14) m = 14;
     mus_arp_mode((uint32_t)m);
 }
 static void mus_ui_turn(unsigned enc, int delta)
@@ -191,7 +191,11 @@ static void mus_ui_turn(unsigned enc, int delta)
     int dir;
     if (!delta) return;
     dir = mus_ui_sign(delta);
-    if (enc == EN_SELECT) { mus_ui_track(dir); return; }
+    if (enc == EN_SELECT) {
+        if (mus_ui_page == MUS_UI_STEPS) mus_ui_move(dir * 16);
+        else mus_ui_track(dir);
+        return;
+    }
     if (enc == EN_ALGO) { mus_ui_arp_knob(dir); return; }
     if (mus_ui_page < MUS_UI_PATTERN) {
         if (enc == EN_K1 || enc == EN_PRESET) {
@@ -227,13 +231,34 @@ static int mus_ui_note(unsigned key)
 }
 static void mus_ui_key(unsigned key, int down)
 {
+    int note;
     if (key > 26u) return;
+    if (mus_ui_seq_down && mus_ui_page == MUS_UI_STEPS && !mus.playing) {
+        if (down) {
+            if (mus_ui_on[key]) return;
+            note = mus_ui_note(key);
+            if (!mus_ui_held) mus_step_clear(mus.sel, mus_ui_cursor);
+            mus_ui_on[key] = 1;
+            mus_ui_pitch[key] = (uint8_t)note;
+            mus_ui_held++;
+            mus_ui_retune = 1;
+            mus_ui_seq_arm = 0;
+            mus_step_put(mus.sel, mus_ui_cursor, (uint32_t)note, 100, MUS_UNIT);
+            mus_emit(1, mus.sel, (uint32_t)note, 100);
+            mus_ui_show(note);
+        } else if (mus_ui_on[key]) {
+            mus_ui_on[key] = 0;
+            mus_emit(0, mus.sel, mus_ui_pitch[key], 0);
+            if (mus_ui_held) mus_ui_held--;
+            if (!mus_ui_held) mus_ui_retune = 0;
+        }
+        return;
+    }
     if (!mus_ui_writing()) {
         mus_note((uint32_t)mus_ui_note(key), 100, down);
         return;
     }
     if (down) {
-        int note;
         if (mus_ui_on[key]) return;
         note = mus_ui_note(key);
         if (!mus_ui_held) {
@@ -251,8 +276,9 @@ static void mus_ui_key(unsigned key, int down)
         mus_emit(0, mus.sel, mus_ui_pitch[key], 0);
         if (mus_ui_held) mus_ui_held--;
         if (!mus_ui_held) {
-            mus_ui_move((int)mus_ui_span);
+            if (!mus_ui_retune) mus_ui_move((int)mus_ui_span);
             mus_ui_span = 1;
+            mus_ui_retune = 0;
         }
     }
 }
@@ -271,20 +297,22 @@ static void mus_ui_pitch_name(int note, char *b)
 static void mus_ui_head(const char *title, const char *right)
 {
     cv_begin(240, 16, C_BLACK);
-    cv_text(4, 2, &FONT_T, title, C_WHITE);
+    cv_text(4, 0, &FONT_B, title, C_WHITE);
     for (int i = 0; i < 4; i++)
         cv_rect(104 + i * 8, 6, 5, 4, i == (int)mus_ui_page ? RGB(75, 210, 150) : RGB(58, 64, 72));
     if (right && right[0])
-        cv_text(236 - text_w(&FONT_T, right), 2, &FONT_T, right, mus.playing ? RGB(40, 220, 90) : RGB(75, 210, 150));
+        cv_text(236 - text_w(&FONT_B, right), 0, &FONT_B, right, mus.playing ? RGB(40, 220, 90) : RGB(75, 210, 150));
     cv_blit(0, 20);
 }
 static void mus_ui_card(int x, int y, const char *label, const char *value)
 {
-    cv_begin(112, 32, RGB(16, 20, 26));
-    cv_rect(0, 0, 112, 2, RGB(75, 210, 150));
-    cv_text(8, 4, &FONT_T, label, RGB(140, 146, 154));
-    cv_text(8, 16, &FONT_T, value, C_WHITE);
+    cv_begin(112, 16, RGB(16, 20, 26));
+    cv_rect(0, 0, 4, 16, RGB(75, 210, 150));
+    cv_text(8, 0, &FONT_B, label, RGB(190, 196, 204));
     cv_blit((uint32_t)x, (uint32_t)y);
+    cv_begin(112, 24, RGB(16, 20, 26));
+    cv_text(8, 0, &FONT_M, value, C_WHITE);
+    cv_blit((uint32_t)x, (uint32_t)y + 16u);
 }
 static void mus_ui_open(int y, int h)
 {
@@ -369,37 +397,77 @@ static void mus_ui_paint_roll(void)
 static void mus_ui_grid(void)
 {
     uint32_t len = mus_ui_len(), head = mus.playing ? mus_playhead() : 0xFFFFFFFFu;
-    for (int band = 0; band < 136; band += 16) {
-        int h = 136 - band, y = 40 + band;
+    for (int band = 0; band < 104; band += 16) {
+        int h = 104 - band, y = 40 + band;
         if (h > 16) h = 16;
         mus_ui_open(y, h);
         for (int row = 0; row < 4; row++) {
-            int y0 = 40 + row * 34;
+            int y0 = 40 + row * 26, cur = (int)(mus_ui_cursor / 16u) == row;
             char bar[2];
             bar[0] = (char)('1' + row);
             bar[1] = 0;
-            cv_text(2, y0 + 6, &FONT_T, bar, row < (int)((len + 15u) / 16u) ? RGB(140, 146, 154) : RGB(48, 52, 58));
+            cv_text(2, y0 + 4, &FONT_B, bar, cur ? C_WHITE : row < (int)((len + 15u) / 16u) ? RGB(140, 146, 154) : RGB(48, 52, 58));
             for (int col = 0; col < 16; col++) {
                 uint32_t step = (uint32_t)(row * 16 + col);
-                int x = 16 + col * 13, in = step < len, on = in && mus_step_used(mus.sel, step);
+                int x = 18 + col * 13, in = step < len, on = in && mus_step_used(mus.sel, step);
                 uint16_t edge = in ? ((col % 4) == 0 ? RGB(140, 152, 166) : RGB(78, 88, 102)) : RGB(42, 48, 56);
-                cv_rect(x, y0 + 4, 11, 20, on ? (step == mus_ui_cursor ? RGB(186, 255, 214) : RGB(75, 210, 150))
+                cv_rect(x, y0 + 2, 11, 18, on ? (step == mus_ui_cursor ? RGB(186, 255, 214) : RGB(75, 210, 150))
                     : (in ? RGB(24, 32, 42) : RGB(12, 14, 18)));
-                cv_rect(x, y0 + 4, 11, 1, edge);
-                cv_rect(x, y0 + 23, 11, 1, edge);
-                cv_rect(x, y0 + 4, 1, 20, edge);
-                cv_rect(x + 10, y0 + 4, 1, 20, edge);
+                cv_rect(x, y0 + 2, 11, 1, edge);
+                cv_rect(x, y0 + 19, 11, 1, edge);
+                cv_rect(x, y0 + 2, 1, 18, edge);
+                cv_rect(x + 10, y0 + 2, 1, 18, edge);
                 if (step == mus_ui_cursor && in) {
-                    cv_rect(x - 1, y0 + 2, 13, 1, C_WHITE);
-                    cv_rect(x - 1, y0 + 24, 13, 1, C_WHITE);
-                    cv_rect(x - 1, y0 + 2, 1, 23, C_WHITE);
-                    cv_rect(x + 11, y0 + 2, 1, 23, C_WHITE);
+                    cv_rect(x - 1, y0 + 1, 13, 1, C_WHITE);
+                    cv_rect(x - 1, y0 + 20, 13, 1, C_WHITE);
+                    cv_rect(x - 1, y0 + 1, 1, 20, C_WHITE);
+                    cv_rect(x + 11, y0 + 1, 1, 20, C_WHITE);
                 }
-                if (step == head) cv_rect(x, y0 + 4, 11, 2, RGB(255, 186, 48));
+                if (step == head) cv_rect(x, y0 + 2, 11, 2, RGB(255, 186, 48));
             }
         }
         mus_ui_close(y);
     }
+}
+static void mus_ui_pitch_name(int note, char *b);
+static void mus_ui_piano(void)
+{
+    static const uint8_t white[7] = {0, 2, 4, 5, 7, 9, 11};
+    static const int black[5] = {0, 1, 3, 4, 5};
+    uint8_t pitch = 60;
+    int have = mus_step_pitch(mus.sel, mus_ui_cursor, &pitch), pc, i, y = 148;
+    char name[8];
+    if (!have) pitch = 60;
+    pc = (int)pitch % 12;
+    mus_ui_open(y, 16);
+    if (have) mus_ui_pitch_name((int)pitch, name);
+    else { name[0] = '-'; name[1] = 0; }
+    cv_text(2, y, &FONT_B, name, have ? RGB(75, 210, 150) : RGB(140, 146, 154));
+    for (i = 0; i < 7; i++) {
+        int x = 42 + i * 26, on = have && pc == (int)white[i];
+        cv_rect(x, y, 24, 32, on ? RGB(75, 210, 150) : RGB(214, 218, 224));
+    }
+    for (i = 0; i < 5; i++) {
+        int x = 42 + black[i] * 26 + 16, note = (int)white[black[i]] + 1, on = have && pc == note;
+        cv_rect(x, y, 14, 16, on ? RGB(186, 255, 214) : RGB(16, 18, 22));
+    }
+    mus_ui_close(y);
+    mus_ui_open(y + 16, 16);
+    for (i = 0; i < 7; i++) {
+        int x = 42 + i * 26, on = have && pc == (int)white[i];
+        cv_rect(x, y, 24, 32, on ? RGB(75, 210, 150) : RGB(214, 218, 224));
+    }
+    mus_ui_close(y + 16);
+}
+static int mus_ui_lit_key(void)
+{
+    uint8_t pitch;
+    int k;
+    if (mus_ui_page != MUS_UI_STEPS) return -1;
+    if (!mus_step_pitch(mus.sel, mus_ui_cursor, &pitch)) return -1;
+    k = (int)pitch - 53 - 12 * (int)mus_ui_oct;
+    if (k < 0 || k > 26) return -1;
+    return k;
 }
 static int mus_ui_quiet(void) { return mus_ui_same(mus_message(), "HOLD REC TO CAPTURE"); }
 static uint32_t mus_ui_sig(void);
@@ -422,8 +490,8 @@ static void mus_ui_lines(const char *hint)
         n = mus_ui_cat(line, n, "/");
         mus_ui_num(line, n, (int)bars);
     } else line[0] = 0;
-    draw_text_box(0, 186, 240, &FONT_T, line[0] ? line : hint, line[0] ? C_WHITE : RGB(170, 176, 184), 0);
-    draw_text_box(0, 202, 240, &FONT_T, mus_ui_quiet() ? (line[0] ? hint : "") : mus_message(),
+    draw_text_box(0, 186, 240, &FONT_B, line[0] ? line : hint, line[0] ? C_WHITE : RGB(170, 176, 184), 0);
+    draw_text_box(0, 202, 240, &FONT_B, mus_ui_quiet() ? (line[0] ? hint : "") : mus_message(),
         mus_ui_quiet() ? RGB(140, 146, 154) : RGB(255, 212, 40), 0);
 }
 static void mus_ui_gate_text(char *b)
@@ -451,7 +519,8 @@ static void mus_ui_draw(void)
         mus_ui_lines(mus.playing ? "KEYS PLAY" : "K1 STEP  K2 PITCH  K3 LENGTH");
     } else if (mus_ui_page == MUS_UI_STEPS) {
         mus_ui_grid();
-        mus_ui_lines(mus.playing ? "KEYS PLAY" : "KEY WRITES  RELEASE ADVANCES");
+        mus_ui_piano();
+        mus_ui_lines(mus.playing ? "KEYS PLAY" : "SELECT BAR  SEQ+KEY");
     } else if (mus_ui_page == MUS_UI_PATTERN) {
         uint32_t bars = mus.len[mus.sel] >= 64u ? 4u : mus.len[mus.sel] >= 32u ? 2u : 1u;
         n = mus_ui_num(value, 0, (int)bars);
@@ -462,7 +531,7 @@ static void mus_ui_draw(void)
         n = mus_ui_num(value, 0, (int)mus_ui_len());
         mus_ui_cat(value, n, " STEPS");
         mus_ui_card(120, 96, "LENGTH", value);
-        draw_text_box(0, 146, 240, &FONT_T, "16 STEPS A BAR, UP TO 4", RGB(140, 146, 154), 1);
+        draw_text_box(0, 146, 240, &FONT_B, "16 STEPS A BAR, UP TO 4", RGB(140, 146, 154), 1);
         mus_ui_lines("K1 BARS  K2 DIV  K3 GATE");
     } else {
         mus_ui_num(value, 0, (int)mus.bpm);
@@ -470,8 +539,8 @@ static void mus_ui_draw(void)
         mus_ui_num(value, 0, (int)mus.aswing);
         mus_ui_card(120, 48, "SWING", value);
         mus_ui_card(8, 96, "GATE", gate);
-        mus_ui_card(120, 96, "ARP", mus_ui_modes[mus.arp < 7u ? mus.arp : 0]);
-        draw_text_box(0, 146, 240, &FONT_T, mus.playing ? "PLAY" : "STOP", mus.playing ? RGB(40, 220, 90) : C_WHITE, 1);
+        mus_ui_card(120, 96, "ARP", mus_ui_modes[mus.arp < 15u ? mus.arp : 0]);
+        draw_text_box(0, 146, 240, &FONT_B, mus.playing ? "PLAY" : "STOP", mus.playing ? RGB(40, 220, 90) : C_WHITE, 1);
         mus_ui_lines("K1 BPM  K2 SWING  K3 GATE");
     }
     mus_ui_seen = mus_ui_sig();
@@ -495,25 +564,25 @@ static void mus_ui_draw_arp(void)
     char value[16], gate[16];
     unsigned div = mus.arp_div < 10u ? mus.arp_div : 2u;
     cv_begin(240, 16, C_BLACK);
-    cv_text(4, 2, &FONT_T, "ARP", C_WHITE);
+    cv_text(4, 0, &FONT_B, "ARP", C_WHITE);
     value[0] = 'T';
     mus_ui_num(value, 1, (int)mus.sel + 1);
-    cv_text(236 - text_w(&FONT_T, value), 2, &FONT_T, value, mus.playing ? RGB(40, 220, 90) : RGB(75, 210, 150));
+    cv_text(236 - text_w(&FONT_B, value), 0, &FONT_B, value, mus.playing ? RGB(40, 220, 90) : RGB(75, 210, 150));
     cv_blit(0, 20);
     {
         char mode[20];
-        unsigned k = mus_ui_cat(mode, 0, mus_ui_modes[mus.arp < 7u ? mus.arp : 0]);
+        unsigned k = mus_ui_cat(mode, 0, mus_ui_modes[mus.arp < 15u ? mus.arp : 0]);
         if (mus.ahold) mus_ui_cat(mode, k, " HOLD");
-        mus_ui_card(8, 48, "MODE", mode);
+        mus_ui_card(8, 48, "K1 MODE", mode);
     }
-    mus_ui_card(120, 48, "RATE", mus_ui_divs[div]);
+    mus_ui_card(120, 48, "K2 RATE", mus_ui_divs[div]);
     mus_ui_num(value, 0, mus.aoct);
-    mus_ui_card(8, 96, "OCT", value);
+    mus_ui_card(8, 96, "K3 OCT", value);
     mus_ui_gate_text(gate);
-    mus_ui_card(120, 96, "GATE", gate);
-    draw_text_box(0, 146, 240, &FONT_T, "KEYS ARP TO MIDI", RGB(75, 210, 150), 1);
-    draw_text_box(0, 186, 240, &FONT_T, "ALGO MODE  K1 RATE  K2 OCT  K3 GATE", RGB(140, 146, 154), 0);
-    draw_text_box(0, 202, 240, &FONT_T, mus_ui_quiet() ? (mus.playing ? "PLAY" : "STOP") : mus_message(),
+    mus_ui_card(120, 96, "K4 GATE", gate);
+    draw_text_box(0, 146, 240, &FONT_B, "KEYS ARP TO MIDI", RGB(75, 210, 150), 1);
+    draw_text_box(0, 186, 240, &FONT_B, "SEL TRACK", RGB(140, 146, 154), 0);
+    draw_text_box(0, 202, 240, &FONT_B, mus_ui_quiet() ? (mus.playing ? "PLAY" : "STOP") : mus_message(),
         mus_ui_quiet() ? (mus.playing ? RGB(40, 220, 90) : C_WHITE) : RGB(255, 212, 40), 0);
     mus_ui_seen = mus_ui_sig();
 }
@@ -523,16 +592,16 @@ static void mus_ui_turn_arp(unsigned enc, int delta)
     if (!delta) return;
     dir = mus_ui_sign(delta);
     if (enc == EN_SELECT) mus_ui_track(dir);
-    else if (enc == EN_ALGO) mus_ui_arp_knob(dir);
-    else if (enc == EN_K1) {
+    else if (enc == EN_K1 || enc == EN_ALGO) mus_ui_arp_knob(dir);
+    else if (enc == EN_K2) {
         int d = (int)mus.arp_div + dir;
         if (d < 0) d = 0;
         if (d > 9) d = 9;
         mus.arp_div = (uint8_t)d;
-    } else if (enc == EN_K2) {
+    } else if (enc == EN_K3) {
         int o = (int)mus.aoct + dir;
         if (o < 1) o = 1;
         if (o > 4) o = 4;
         mus_octaves((uint32_t)o);
-    } else if (enc == EN_K3) mus_ui_gate_knob(delta);
+    } else if (enc == EN_K4) mus_ui_gate_knob(delta);
 }

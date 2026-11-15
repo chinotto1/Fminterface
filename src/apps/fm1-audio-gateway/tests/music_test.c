@@ -141,6 +141,39 @@ static void test_arp(void)
     mus_note(60, 100, 1);
     mus_time(1); expect(next_on() == 60, "octave span starts on the held note");
     mus_time(mus.ms + 125); expect(next_on() == 72, "octave span continues an octave up");
+
+    mus_init(); mus_time(0); mus_set_bpm(120); mus_arp_mode(7);
+    mus_note(60, 100, 1); mus_note(64, 100, 1); mus_note(67, 100, 1);
+    mus_time(1); expect(next_on() == 67, "down-up starts at the top");
+    mus_time(mus.ms + 125); expect(next_on() == 64, "down-up falls");
+    mus_time(mus.ms + 125); expect(next_on() == 60, "down-up reaches the bottom");
+    mus_time(mus.ms + 125); expect(next_on() == 64, "down-up turns back");
+
+    mus_init(); mus_time(0); mus_set_bpm(120); mus_arp_mode(8);
+    mus_note(60, 100, 1); mus_note(64, 100, 1); mus_note(67, 100, 1);
+    mus_time(1); expect(next_on() == 60, "up+8 starts at the bottom");
+    mus_time(mus.ms + 125); expect(next_on() == 64, "up+8 continues");
+    mus_time(mus.ms + 125); expect(next_on() == 67, "up+8 reaches the top");
+    mus_time(mus.ms + 125); expect(next_on() == 72, "up+8 adds the bottom note an octave up");
+
+    mus_init(); mus_time(0); mus_set_bpm(120); mus_arp_mode(11);
+    mus_note(60, 100, 1); mus_note(64, 100, 1); mus_note(67, 100, 1);
+    mus_time(1); expect(next_on() == 60, "pinky starts on the bottom");
+    mus_time(mus.ms + 125); expect(next_on() == 67, "pinky returns to the top");
+    mus_time(mus.ms + 125); expect(next_on() == 64, "pinky plays the middle");
+    mus_time(mus.ms + 125); expect(next_on() == 67, "pinky returns to the top again");
+
+    mus_init(); mus_time(0); mus_set_bpm(120); mus_arp_mode(12);
+    mus_note(60, 100, 1); mus_note(64, 100, 1); mus_note(67, 100, 1);
+    mus_time(1); expect(next_on() == 60, "thumb starts on the bottom");
+    mus_time(mus.ms + 125); expect(next_on() == 64, "thumb plays the next note");
+    mus_time(mus.ms + 125); expect(next_on() == 60, "thumb returns to the bottom");
+    mus_time(mus.ms + 125); expect(next_on() == 67, "thumb plays the top");
+
+    mus_init(); mus_time(0); mus_set_bpm(120); mus_arp_mode(14);
+    mus_note(60, 100, 1); mus_note(64, 100, 1);
+    mus_time(1);
+    expect(mus.arp_n == 2 && mus.arp_chord[0] == 60 && mus.arp_chord[1] == 64, "chord plays the held notes together");
 }
 static void test_playback(void)
 {

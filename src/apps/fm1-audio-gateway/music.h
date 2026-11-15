@@ -37,8 +37,8 @@ static struct {
     uint8_t sel, playing, just, free, clock_ext, armed, clock_set;
     uint8_t arp, ahold, aoct, agate, aswing, arp_div, live_arp;
     uint32_t clock_pos;
-    uint8_t nheld, phys, arp_have, arp_note, live_n;
-    uint8_t held[16], live[16];
+    uint8_t nheld, phys, arp_have, arp_note, arp_n, arp_walk, live_n;
+    uint8_t held[16], live[16], arp_chord[4];
     uint8_t seq_on[MUS_TRACKS][MUS_REC];
     mus_note_t note[MUS_TRACKS][MUS_REC];
     mus_cap_t cap[MUS_CAP];
@@ -127,10 +127,15 @@ static void mus_live_silence(void)
 static void mus_cap_off(uint32_t note);
 static void mus_arp_silence(void)
 {
+    uint32_t i, n;
     if (!mus.arp_have) return;
-    mus_cap_off(mus.arp_note);
-    mus_emit(0, mus.sel, mus.arp_note, 0);
+    n = mus.arp_n ? mus.arp_n : 1u;
+    for (i = 0; i < n && i < 4u; i++) {
+        mus_cap_off(mus.arp_chord[i]);
+        mus_emit(0, mus.sel, mus.arp_chord[i], 0);
+    }
     mus.arp_have = 0;
+    mus.arp_n = 0;
 }
 static void mus_seq_silence(void)
 {
@@ -241,7 +246,7 @@ static void mus_arp_add(uint32_t note)
     mus.phys++;
     for (i = 0; i < mus.nheld; i++) if (mus.held[i] == note) return;
     if (mus.nheld < 16u) mus.held[mus.nheld++] = (uint8_t)note;
-    if (mus.nheld == 1u) { mus.arp_pos = 0xFFFFFFF; mus.arp_idx = 0xFFFFFFFFu; }
+    if (mus.nheld == 1u) { mus.arp_pos = 0xFFFFFFF; mus.arp_idx = 0xFFFFFFFFu; mus.arp_walk = 0; }
 }
 static void mus_arp_remove(uint32_t note)
 {
@@ -269,6 +274,84 @@ static void mus_note(uint32_t note, uint32_t vel, int on)
         mus_live_drop(note);
     }
 }
+static void mus_arp_sort(uint32_t *list, uint32_t n)
+{
+    uint32_t i, j;
+    for (i = 1; i < n; i++) for (j = i; j > 0 && list[j - 1] > list[j]; j--) {
+        uint32_t x = list[j]; list[j] = list[j - 1]; list[j - 1] = x;
+    }
+}
+static void mus_arp_strike(const uint32_t *notes, uint32_t n, uint32_t period)
+{
+    uint32_t i;
+    if (!n) return;
+    if (n > 4u) n = 4u;
+    if (mus.arp_have) mus_arp_silence();
+    mus.arp_n = (uint8_t)n;
+    for (i = 0; i < n; i++) {
+        mus.arp_chord[i] = (uint8_t)notes[i];
+        mus_cap_on(notes[i], 100);
+        mus_emit(1, mus.sel, notes[i], 100);
+    }
+    mus.arp_note = mus.arp_chord[0];
+    mus.arp_have = 1;
+    mus.arp_off = period * (mus.agate ? mus.agate : 1u) / 128u;
+    if (!mus.arp_off) mus.arp_off = 1;
+    if (mus.arp_off <= mus.arp_pos) mus_arp_silence();
+    else mus.arp_off -= mus.arp_pos;
+}
+/* One pass of a Felucca/Sloop pattern on the sorted chord. Octaves repeat it higher. */
+static uint32_t mus_arp_fill(uint32_t mode, const uint32_t *src, uint32_t n, uint32_t *dst)
+{
+    uint32_t base[16], shape[32], i, o, sn = 0, len = 0, oct, bn, a, b, mid, k, idx, cyc, p;
+    if (!n) return 0;
+    bn = n > 16u ? 16u : n;
+    for (i = 0; i < bn; i++) base[i] = src[i];
+    mus_arp_sort(base, bn);
+    if (mode == 8u) {
+        for (i = 0; i < bn && sn < 32u; i++) shape[sn++] = base[i];
+        if (sn < 32u && base[0] + 12u < 128u) shape[sn++] = base[0] + 12u;
+    } else if (mode == 9u) {
+        a = 0; b = bn;
+        while (a < b && sn < 32u) {
+            shape[sn++] = base[a++];
+            if (a < b && sn < 32u) shape[sn++] = base[--b];
+        }
+    } else if (mode == 10u) {
+        mid = (bn - 1u) / 2u;
+        for (k = 0; k < bn && sn < 32u; k++) {
+            if (!k) idx = mid;
+            else if (k & 1u) idx = mid + k / 2u + 1u;
+            else idx = mid - k / 2u;
+            if (idx < bn) shape[sn++] = base[idx];
+        }
+    } else if (mode == 11u) {
+        if (bn == 1u) shape[sn++] = base[0];
+        else for (i = 0; i + 1u < bn && sn + 1u < 32u; i++) {
+            shape[sn++] = base[i];
+            shape[sn++] = base[bn - 1u];
+        }
+    } else if (mode == 12u) {
+        if (bn == 1u) shape[sn++] = base[0];
+        else for (i = 1; i < bn && sn + 1u < 32u; i++) {
+            shape[sn++] = base[0];
+            shape[sn++] = base[i];
+        }
+    } else if (mode == 7u) {
+        cyc = bn > 1u ? 2u * bn - 2u : 1u;
+        for (p = 0; p < cyc && sn < 32u; p++) {
+            idx = p < bn ? bn - 1u - p : p - (bn - 1u);
+            shape[sn++] = base[idx];
+        }
+    } else return 0;
+    oct = mus.aoct ? mus.aoct : 1u;
+    if (oct > 4u) oct = 4u;
+    for (o = 0; o < oct; o++) for (i = 0; i < sn && len < 64u; i++) {
+        uint32_t pitched = shape[i] + 12u * o;
+        if (pitched < 128u) dst[len++] = pitched;
+    }
+    return len;
+}
 static void mus_arp_advance(uint32_t n)
 {
     uint32_t period, sw, list[64], len, cnt, i, j, o;
@@ -294,8 +377,50 @@ static void mus_arp_advance(uint32_t n)
         if (mus.arp_pos >= 0xFFFFFFFu) mus.arp_pos = 0;
         else mus.arp_pos -= limit;
         len = 0;
-        for (i = 0; i < mus.nheld; i++) list[i] = mus.held[i];
-        cnt = mus.nheld;
+        for (i = 0; i < mus.nheld && i < 16u; i++) list[i] = mus.held[i];
+        cnt = mus.nheld < 16u ? mus.nheld : 16u;
+        mus.arp_idx++;
+        if (mode == 14u) {
+            uint32_t octs = mus.aoct ? mus.aoct : 1u, step, c, chord[4], cn = 0, p;
+            if (octs > 4u) octs = 4u;
+            step = mus.arp_idx % octs;
+            c = cnt > 4u ? 4u : cnt;
+            for (i = 0; i < c; i++) {
+                p = list[i] + 12u * step;
+                if (p < 128u) chord[cn++] = p;
+            }
+            mus_arp_strike(chord, cn, period);
+            continue;
+        }
+        if (mode == 13u) {
+            uint32_t sorted[64], sl = 0, at, dir = 0;
+            for (i = 0; i < cnt; i++) sorted[i] = list[i];
+            mus_arp_sort(sorted, cnt);
+            for (o = 0; o < (mus.aoct ? mus.aoct : 1u) && o < 4u; o++)
+                for (i = 0; i < cnt && sl < 64u; i++) {
+                    uint32_t pitched = sorted[i] + 12u * o;
+                    if (pitched < 128u) sorted[sl++] = pitched;
+                }
+            if (!sl) return;
+            at = mus.arp_walk < sl ? mus.arp_walk : 0;
+            if (mus.arp_idx) {
+                if (sl == 1u) dir = 0;
+                else if (!at) dir = 1;
+                else if (at + 1u >= sl) dir = 0xFFFFFFFFu;
+                else dir = (mus_rng() & 1u) ? 1u : 0xFFFFFFFFu;
+                at = (uint32_t)((int32_t)at + (int32_t)dir);
+            }
+            mus.arp_walk = (uint8_t)at;
+            mus_arp_strike(&sorted[at], 1, period);
+            continue;
+        }
+        if (mode >= 7u) {
+            len = mus_arp_fill(mode, list, cnt, list);
+            if (!len) return;
+            j = mus.arp_idx % len;
+            mus_arp_strike(&list[j], 1, period);
+            continue;
+        }
         if (mode != 5u) for (i = 1; i < cnt; i++) for (j = i; j > 0 && list[j - 1] > list[j]; j--) {
             uint32_t x = list[j]; list[j] = list[j - 1]; list[j - 1] = x;
         }
@@ -305,7 +430,6 @@ static void mus_arp_advance(uint32_t n)
         }
         if (!len) return;
         if (mode == 6u) { list[0] = mus.held[mus.nheld - 1u]; len = 1; }
-        mus.arp_idx++;
         switch (mode) {
         case 2: j = len - 1u - mus.arp_idx % len; break;
         case 3: {
@@ -316,15 +440,7 @@ static void mus_arp_advance(uint32_t n)
         case 4: j = mus_rng() % len; break;
         default: j = mus.arp_idx % len; break;
         }
-        if (mus.arp_have) mus_arp_silence();
-        mus.arp_note = (uint8_t)list[j];
-        mus.arp_have = 1;
-        mus.arp_off = period * (mus.agate ? mus.agate : 1u) / 128u;
-        if (!mus.arp_off) mus.arp_off = 1;
-        mus_cap_on(mus.arp_note, 100);
-        mus_emit(1, mus.sel, mus.arp_note, 100);
-        if (mus.arp_off <= mus.arp_pos) mus_arp_silence();
-        else mus.arp_off -= mus.arp_pos;
+        mus_arp_strike(&list[j], 1, period);
     }
 }
 static int mus_hit(uint32_t a, uint32_t b, uint32_t point) { return a < point && point <= b; }
@@ -613,7 +729,7 @@ static void mus_length(uint32_t len)
 static void mus_division(uint32_t div) { if (div < 10u) mus.div[mus.sel] = (uint8_t)div; }
 static void mus_arp_mode(uint32_t mode)
 {
-    if (mode > 6u) mode = 6u;
+    if (mode > 14u) mode = 14u;
     if (mode && !mus.arp) mus_live_silence();
     if (!mode && mus.arp) { mus_arp_silence(); mus.nheld = mus.phys = 0; }
     mus.arp = (uint8_t)mode;
