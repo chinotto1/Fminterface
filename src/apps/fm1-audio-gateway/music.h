@@ -42,7 +42,7 @@ static struct {
     uint8_t seq_on[MUS_TRACKS][MUS_REC];
     mus_note_t note[MUS_TRACKS][MUS_REC];
     mus_cap_t cap[MUS_CAP];
-    struct { uint8_t valid, track, playing; uint16_t len, bpm, n; mus_note_t note[MUS_REC]; } undo;
+    struct { uint8_t valid, kind, playing; uint16_t bpm, len[MUS_TRACKS]; mus_note_t note[MUS_TRACKS][MUS_REC]; } undo;
     uint32_t mq[64];
     uint8_t mq_r, mq_n;
     char msg[40];
@@ -391,15 +391,17 @@ static void mus_poll(uint32_t now)
     if (now < mus.ms) { mus.ms = now; return; }
     mus_time(now);
 }
-static void mus_undo_save(uint32_t track)
+static void mus_undo_save(void)
 {
+    uint32_t k;
     mus.undo.valid = 1;
-    mus.undo.track = (uint8_t)track;
+    mus.undo.kind = 0;
     mus.undo.playing = mus.playing;
-    mus.undo.len = mus.len[track];
     mus.undo.bpm = (uint16_t)mus.bpm;
-    mus.undo.n = (uint16_t)mus_count(track);
-    memcpy(mus.undo.note, mus.note[track], sizeof mus.undo.note);
+    for (k = 0; k < MUS_TRACKS; k++) {
+        mus.undo.len[k] = mus.len[k];
+        memcpy(mus.undo.note[k], mus.note[k], sizeof mus.undo.note[k]);
+    }
 }
 static int mus_add(uint32_t track, uint32_t step, uint32_t on, uint32_t dur, uint32_t note, uint32_t vel)
 {
@@ -493,7 +495,7 @@ static int mus_commit(uint32_t track, mus_cap_t *ev, uint32_t from, uint32_t unt
         for (slot = 0; slot < MUS_REC && mus.note[track][slot].used; slot++) ;
         if (slot == MUS_REC) { full = 1; break; }
         if (!saved) {
-            mus_undo_save(track);
+            mus_undo_save();
             if (!mus_count(track)) mus.len[track] = (uint16_t)w;
             saved = 1;
         }
@@ -552,15 +554,29 @@ static int mus_undo(void)
 {
     uint32_t k;
     if (!mus.undo.valid) return 0;
-    k = mus.undo.track;
     mus_seq_silence();
-    memcpy(mus.note[k], mus.undo.note, sizeof mus.undo.note);
-    mus.len[k] = mus.undo.len;
+    for (k = 0; k < MUS_TRACKS; k++) {
+        memcpy(mus.note[k], mus.undo.note[k], sizeof mus.note[k]);
+        mus.len[k] = mus.undo.len[k];
+    }
     mus.bpm = mus.undo.bpm;
     if (mus.playing && !mus.undo.playing) mus_stop();
     mus.undo.valid = 0;
-    mus_say("CAPTURE UNDONE");
+    mus_say(mus.undo.kind ? "CLEAR UNDONE" : "CAPTURE UNDONE");
     return 1;
+}
+static void mus_sequence_clear(void)
+{
+    uint32_t k;
+    mus_undo_save();
+    mus.undo.kind = 1;
+    if (mus.playing) mus_stop();
+    else { mus_seq_silence(); mus_arp_silence(); }
+    mus.nheld = mus.phys = mus.live_n = 0;
+    mus.free = 0;
+    mus.cap_from = mus.cap_w;
+    for (k = 0; k < MUS_TRACKS; k++) memset(mus.note[k], 0, sizeof mus.note[k]);
+    mus_say("SEQUENCE CLEARED");
 }
 static void mus_init(void)
 {

@@ -1,7 +1,7 @@
 FM Interface firmware for the M-VAVE FM-1.
 
 File: fm-interface.fwsc
-SHA-256: 6ee804b7dfe07376e5f4ed8af504a84ebdd546c16f84c7b0abcec689d9cc1264
+SHA-256: ffa9f44d12afe078f08bb53981cf24bee9a8315e36770b21884325c2db874daa
 
 This image has been linked and checked on a host. It has not been flashed to a device.
 Spectrum together with aptX and full USB recording does not all fit at once; if a
@@ -19,6 +19,7 @@ Install with M-Flasher (https://github.com/jvitkauskas/m-flasher):
 After it boots, USB audio is "FM1 Audio". SEQ opens NOTES, the piano roll. Press SEQ
 again for STEPS, PATTERN, then TEMPO. PATTERN sets 1, 2 or 4 bars. Stopped, on NOTES
 or STEPS, a key or chord writes the cursor step and releasing the keys moves on.
+Hold SEQ and press OCT- to clear every track. Hold EDIT to undo that clear.
 ARP opens the arpeggiator. PLAY/STOP starts and stops MIDI clock and the sequence,
 and does not mute incoming audio. If the master was muted by the previous firmware,
 press PLAY once and the audio comes back. REC on a musical page captures MIDI and

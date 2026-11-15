@@ -612,6 +612,24 @@ void app_input_only(void)
     gateway_midi_service();
     if(gateway_shot_frozen && (buttons!=gateway_buttons || key_pressed || gateway_fx_tracking ||
             gateway_fx_save_tracking || gateway_oct_tracking))gateway_screenshot_cancel();
+    if ((pressed & (1u << B_OCTDN)) && (buttons & (1u << B_SEQ))) {
+        mus_release_keys();
+        mus_ui_sequence_clear();
+        mus_ui_seq_arm = 0;
+        mus.live_arp = 0;
+        if (gateway_screen != GATEWAY_SEQ) { gateway_screen = GATEWAY_SEQ; gateway_view_changed(); }
+        else gateway_page_redraw = 1;
+        app_say(mus_message(), "");
+    } else if (pressed & (1u << B_SEQ)) mus_ui_seq_arm = 1;
+    if ((gateway_buttons & (1u << B_SEQ)) && !(buttons & (1u << B_SEQ)) && mus_ui_seq_arm) {
+        mus_release_keys();
+        mus_ui_silence();
+        mus.live_arp = 0;
+        if (gateway_screen == GATEWAY_SEQ) mus_ui_cycle();
+        else gateway_screen = GATEWAY_SEQ;
+        gateway_view_changed();
+    }
+    if (!(buttons & (1u << B_SEQ))) mus_ui_seq_arm = 0;
     if (pressed & (1u << B_PLAY)) {
         /* Transport only. PLAY used to mute the master and cut the audio
          * coming in from USB or Bluetooth. */
@@ -683,11 +701,6 @@ void app_input_only(void)
         if(gateway_screen!=GATEWAY_MIXER){gateway_screen=GATEWAY_MIXER;gateway_save_notice=0;gateway_view_changed();}
     } else if (pressed & (1u << B_FX)) {
         gateway_fx_tracking=1;gateway_fx_held=0;gateway_fx_press_ms=plat_ms();
-    } else if (pressed & (1u << B_SEQ)) {
-        mus_release_keys();mus_ui_silence();mus.live_arp=0;
-        if(gateway_screen==GATEWAY_SEQ)mus_ui_cycle();
-        else gateway_screen=GATEWAY_SEQ;
-        gateway_view_changed();
     } else if (pressed & (1u << B_ARP)) {
         mus_release_keys();mus_ui_silence();if(!mus.arp)mus_arp_mode(1);mus.live_arp=1;gateway_screen=GATEWAY_ARP;gateway_view_changed();
     } else if (pressed & (1u << B_HOME)) {
@@ -737,7 +750,7 @@ void app_input_only(void)
         uint32_t both=(1u<<B_OCTUP)|(1u<<B_OCTDN);
         if((buttons&both)==both && (pressed&both)){mus_ui_oct=0;gateway_page_redraw=1;}
         else if(pressed&(1u<<B_OCTUP)){if(mus_ui_oct<3)mus_ui_oct++;gateway_page_redraw=1;}
-        else if(pressed&(1u<<B_OCTDN)){if(mus_ui_oct>-3)mus_ui_oct--;gateway_page_redraw=1;}
+        else if(pressed&(1u<<B_OCTDN) && !(buttons&(1u<<B_SEQ))){if(mus_ui_oct>-3)mus_ui_oct--;gateway_page_redraw=1;}
         if(pressed&(1u<<B_SEL)){mus_hold(!mus.ahold);gateway_page_redraw=1;}
         if(pressed&(1u<<B_REC)){
             if(gateway_muted){gateway_muted=0;gateway_mixer_publish();gateway_settings_changed();}

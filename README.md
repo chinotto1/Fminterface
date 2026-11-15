@@ -74,7 +74,7 @@ The roll shows 16 steps, and PATTERN extends the loop to 1, 2 or 4 bars (16, 32 
 
 The sequencer and arpeggiator send USB MIDI on the channel chosen in Settings (channel 1 until you change it), plus MIDI clock, Start and Stop while the sequence runs.
 
-Four MIDI tracks share one clock. **SELECT** chooses the track. On TEMPO, **K1** is BPM (40–240). On NOTES, **K1** and **PRESETS** move the step and **K2** changes pitch. **ALGORITHM** is the arpeggiator: OFF, UP, DN, UPDN, RND, ORD, REPEAT. **SEL** toggles arpeggiator hold. **OCT−/OCT+** shift the keys; press both to reset. A short **EDIT** on NOTES or STEPS clears the cursor step.
+Four MIDI tracks share one clock. **SELECT** chooses the track. On TEMPO, **K1** is BPM (40–240). On NOTES, **K1** and **PRESETS** move the step and **K2** changes pitch. **ALGORITHM** is the arpeggiator: OFF, UP, DN, UPDN, RND, ORD, REPEAT. **SEL** toggles arpeggiator hold. **OCT−/OCT+** shift the keys; press both to reset. A short **EDIT** on NOTES or STEPS clears the cursor step. Hold **SEQ** and press **OCT−** to clear every track. Hold **EDIT** to put that clear back.
 
 Notes leave on USB MIDI. Track 1 uses the MIDI channel from Settings; each next track uses the next channel.
 

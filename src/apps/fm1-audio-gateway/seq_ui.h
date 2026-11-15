@@ -9,7 +9,7 @@
  * empty pattern can still take the Melodee nightly 3fe570d free timing. */
 #include "music.h"
 static int8_t mus_ui_oct;
-static uint8_t mus_ui_page, mus_ui_cursor, mus_ui_held, mus_ui_span = 1, mus_ui_lo = 48;
+static uint8_t mus_ui_page, mus_ui_cursor, mus_ui_held, mus_ui_span = 1, mus_ui_lo = 48, mus_ui_seq_arm;
 static uint8_t mus_ui_on[27], mus_ui_pitch[27];
 static uint32_t mus_ui_edit_ms, mus_ui_seen;
 static uint8_t mus_ui_rec, mus_ui_rec_done, mus_ui_edit, mus_ui_edit_done;
@@ -75,6 +75,13 @@ static void mus_ui_cycle(void)
 {
     mus_ui_silence();
     mus_ui_page = (uint8_t)((mus_ui_page + 1u) % 4u);
+}
+static void mus_ui_sequence_clear(void)
+{
+    mus_ui_silence();
+    mus_sequence_clear();
+    mus_ui_cursor = 0;
+    mus_ui_span = 1;
 }
 static int mus_ui_writing(void)
 {

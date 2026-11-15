@@ -83,6 +83,26 @@ int main(void)
     held_btn=0;app_input_only();
     assert(gateway_screen==GATEWAY_SEQ && !mus.playing && mus.bpm==100 && mus.len[0]==16 && !mus_count(0));
     enc_acc[EN_ALGO]=1;app_input_only();assert(mus.arp==1);
-    puts("PASS: piano roll, 4-bar step entry, nightly free-take, undo, arp");
+    mus_arp_mode(0);
+    mus_length(64);
+    mus_step_put(0, 4, 60, 100, MUS_UNIT);
+    mus_step_put(1, 2, 67, 100, MUS_UNIT);
+    assert(mus_count(0)==1 && mus_count(1)==1 && mus.len[0]==64);
+    {
+        uint8_t page=mus_ui_page;
+        held_btn=1u<<B_SEQ;app_input_only();
+        held_btn|=1u<<B_OCTDN;app_input_only();
+        assert(!strcmp(mus_message(),"SEQUENCE CLEARED"));
+        assert(!mus_count(0) && !mus_count(1) && mus.len[0]==64 && mus.len[1]==16 && mus.bpm==100);
+        assert(mus_ui_cursor==0 && mus_ui_page==page && gateway_screen==GATEWAY_SEQ && !mus_ui_oct);
+        held_btn=0;app_input_only();
+        assert(mus_ui_page==page);
+        held_btn=1u<<B_EDIT;app_input_only();
+        now_ms+=700;app_input_only();
+        held_btn=0;app_input_only();
+        assert(!strcmp(mus_message(),"CLEAR UNDONE"));
+        assert(mus_count(0)==1 && mus_count(1)==1 && mus.len[0]==64);
+    }
+    puts("PASS: piano roll, 4-bar step entry, nightly free-take, undo, arp, SEQ+OCT- clear");
     return 0;
 }

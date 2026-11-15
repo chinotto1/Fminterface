@@ -11,7 +11,7 @@
 | FX | Open the last FX page; subsequent presses alternate EQ and limiter. |
 | Hold FX for 1 s | Toggle the complete master FX chain. |
 | SEL on an FX page | Toggle that individual effect; its LED is bright when enabled. |
-| SEQ | Open the sequencer on NOTES. Press again for STEPS, PATTERN, then TEMPO. |
+| SEQ | Open the sequencer on NOTES. Press again for STEPS, PATTERN, then TEMPO. Hold it and press OCT− to clear every track. |
 | ARP | Open the arpeggiator. |
 | PLAY | Start and stop the sequence. It does not mute incoming audio. If the master was muted, PLAY turns it back on. |
 
@@ -29,7 +29,7 @@ SEQ opens NOTES, the piano roll. Press SEQ again for STEPS, PATTERN, then TEMPO,
 
 The roll shows 16 steps. PATTERN sets the loop to 1, 2 or 4 bars, which is 16, 32 or 64 steps at the current division. STEPS shows all four bars. A bar is 16 steps.
 
-On NOTES and STEPS, with the sequence stopped, play a key or a chord on the cursor step. Releasing the last key advances the cursor. PRESETS or K1 walks steps, including empty ones; while a key is held, either one lengthens that note and the cursor moves past it. K2 changes the pitch of the notes on the step, or scrolls the roll when the step is empty. K3 changes their length. A short EDIT clears the cursor step. While the sequence is playing, the keys only play.
+On NOTES and STEPS, with the sequence stopped, play a key or a chord on the cursor step. Releasing the last key advances the cursor. PRESETS or K1 walks steps, including empty ones; while a key is held, either one lengthens that note and the cursor moves past it. K2 changes the pitch of the notes on the step, or scrolls the roll when the step is empty. K3 changes their length. A short EDIT clears the cursor step. Hold SEQ and press OCT− to clear every track; the bar length and tempo stay, and hold EDIT to put the notes back. While the sequence is playing, the keys only play.
 
 PATTERN: K1 or PRESETS sets 1, 2 or 4 bars, K2 the division, K3 the gate. TEMPO: K1 is BPM from 40 to 240, K2 swing, K3 gate. SELECT chooses one of four MIDI tracks on every page. ALGORITHM sets the arpeggiator to OFF, UP, DN, UPDN, RND, ORD or REPEAT. SEL toggles arpeggiator hold. OCT− and OCT+ shift the keys by octaves, and both together reset.
 
