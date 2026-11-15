@@ -12,7 +12,9 @@
 #ifndef FM_INTERFACE_MUSIC_H
 #define FM_INTERFACE_MUSIC_H
 #include <stdint.h>
+#ifdef PLAT_HOST
 #include <string.h>
+#endif
 #define MUS_TRACKS 4u
 #define MUS_CAP 128u
 #define MUS_REC 96u

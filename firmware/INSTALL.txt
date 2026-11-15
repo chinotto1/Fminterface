@@ -1,0 +1,20 @@
+FM Interface firmware for the M-VAVE FM-1.
+
+File: fm-interface.fwsc
+SHA-256: 4017b0dfbaf6f825f0c900732cc84b7a39e5195b8c87dd5b59d086481f409aec
+
+This image has been linked and checked on a host. It has not been flashed to a device.
+Spectrum together with aptX and full USB recording does not all fit at once; if a
+graph cannot allocate, the screen falls back to meters. Audio and the sequencer still run.
+
+Install with M-Flasher (https://github.com/jvitkauskas/m-flasher):
+1. Use a data USB cable. Do not unplug or power off during the write.
+2. If the FM-1 is still on stock M-VAVE firmware, install m-bootloader first.
+   Audio Router, Melodee, Felucca, and other fm1-base firmwares already have it.
+3. Select fm-interface.fwsc.
+4. Keep bootloader replacement OFF. Do not erase the whole chip.
+5. Leave "Also erase settings and Bluetooth pairings" unchecked.
+6. If M-Flasher cannot see the running firmware, power on while holding REC, then flash.
+
+After it boots, USB audio is "FM1 Audio". SEL on the meters page opens the sequencer.
+PLAY on that page starts and stops the sequence. PLAY on every other page mutes the master.

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * The nightly free-take cases from Melodee 3fe570d (issue 65) and the arpeggiator order. */
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include "../music.h"
 static int fails;

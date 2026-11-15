@@ -69,10 +69,15 @@ static void mus_ui_draw(void)
     while (mus_message()[n] && n + 1u < sizeof mus_ui_seen_msg) { mus_ui_seen_msg[n] = mus_message()[n]; n++; }
     mus_ui_seen_msg[n] = 0;
 }
+static int mus_ui_same(const char *a, const char *b)
+{
+    while (*a && *a == *b) { a++; b++; }
+    return *a == *b;
+}
 static int mus_ui_moved(void)
 {
     uint32_t head = mus.playing ? mus_playhead() : 0;
-    return head != mus_ui_seen_step || mus.playing != mus_ui_seen_play || strcmp(mus_message(), mus_ui_seen_msg);
+    return head != mus_ui_seen_step || mus.playing != mus_ui_seen_play || !mus_ui_same(mus_message(), mus_ui_seen_msg);
 }
 static void mus_ui_turn(unsigned enc, int delta)
 {

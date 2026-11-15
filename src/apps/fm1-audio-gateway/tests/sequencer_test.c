@@ -5,7 +5,6 @@
 #include "../../../host/plat_host.c"
 #undef main
 #include <assert.h>
-#include <string.h>
 static void tap(unsigned b){held_btn=1u<<b;app_input_only();held_btn=0;app_input_only();}
 static void key_at(unsigned key, int down){held_keys=down?1u<<key:0;app_input_only();}
 static void phrase(void)
