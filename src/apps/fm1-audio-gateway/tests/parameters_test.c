@@ -6,15 +6,15 @@
 #include <assert.h>
 static void play(void)
 {
-    held_btn = 1u << B_PLAY; app_input_only();
-    held_btn = 0; app_input_only();
+    gateway_mixer_toggle(3, 0);
 }
 static void leds(int muted)
 {
+    (void)muted;
     uint32_t active=1u<<(gateway_screen==GATEWAY_MAIN?B_HOME:B_EDIT);
     uint32_t dim=((1u<<B_HOME)|(1u<<B_EDIT)|(1u<<B_FX)) & ~active;
     if(gateway_bt_mode)dim|=1u<<B_OCTUP;
-    assert(lights_b == ((muted ? 1u << B_PLAY : LED_PLAY_GREEN)|active));
+    assert(lights_b == (LED_PLAY_GREEN|active));
     assert(lights_db==dim && lights_glow==1 && !lit_keys && !mid_keys && !dim_keys);
     assert(lit_btn == ((1u << B_PLAY)|active) && dim_btn==dim);
 }

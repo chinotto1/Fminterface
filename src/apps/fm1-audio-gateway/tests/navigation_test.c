@@ -10,7 +10,7 @@ static void lights(void)
     unsigned dim=(((1u<<B_HOME)|(1u<<B_EDIT)|(1u<<B_FX))&~active)|(gateway_screen==GATEWAY_SETTINGS?1u<<B_SAVE:0);
     if(gateway_screen==GATEWAY_FX){if(gateway_fx_limiter?gateway_fx_params.lim:gateway_fx_params.eq)active|=1u<<B_SEL;else dim|=1u<<B_SEL;}
     if(gateway_bt_mode)dim|=1u<<B_OCTUP;
-    assert(lights_b==(active|(gateway_muted?1u<<B_PLAY:LED_PLAY_GREEN)));
+    assert(lights_b==(active|LED_PLAY_GREEN));
     assert(dim_btn==dim && lights_db==dim && lights_glow==1 && !lit_keys && !mid_keys && !dim_keys);
 }
 int main(void)
@@ -28,7 +28,7 @@ int main(void)
         assert(!usb_input_wave_enabled && !usb_input_meter_enabled && !master_meter_enabled && !usb_spectrum_enabled);
         tap(B_HOME);assert(gateway_mode==mode);lights();
         tap(B_FX);assert(gateway_screen==GATEWAY_FX && !gateway_display_block);app_loop();lights();
-        tap(B_PLAY);lights();assert(gateway_muted);tap(B_PLAY);lights();assert(!gateway_muted);
+        tap(B_PLAY);lights();assert(!gateway_muted && mus.playing);tap(B_PLAY);lights();assert(!gateway_muted && !mus.playing);
         tap(B_HOME);assert(gateway_mode==mode && gateway_screen==GATEWAY_MAIN);
         now_ms+=750;app_loop();gateway_settings_t s;assert(plat_store_load(OBJ_SETTINGS,&s,sizeof s)==sizeof s && s.version==GATEWAY_SETTINGS_VERSION && s.mode==mode);
         app_init();app_ui_init();assert(gateway_mode==mode && gateway_screen==GATEWAY_MAIN);tap(B_HOME);

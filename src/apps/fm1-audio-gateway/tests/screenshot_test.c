@@ -66,7 +66,7 @@ int main(void){
  begin();held_btn=1u<<B_HOME;app_frame();assert(!gateway_shot_frozen);held_btn=0;app_input_only();
  request(0);assert(!gateway_shot_pending); /* interrupted transfer cannot silently restart */
  begin();enc_acc[EN_SELECT]=1;app_input_only();assert(!gateway_shot_frozen);
- begin();unsigned muted=gateway_muted;held_btn=1u<<B_PLAY;app_frame();assert(!gateway_shot_frozen && gateway_muted!=muted);held_btn=0;app_input_only();
+ begin();unsigned muted=gateway_muted;held_btn=1u<<B_PLAY;app_frame();assert(!gateway_shot_frozen && gateway_muted==muted);held_btn=0;app_input_only();
  begin();app_bt_aac_prepare();assert(!gateway_shot_frozen); /* before graph buffers can be reused */
  begin();app_panic();assert(!gateway_shot_frozen && !gateway_shot_pending && !gateway_display_block);
  app_ui_init();begin();uint8_t invalid[]={0x7d,0x4c,0x49,1,127,127,1};app_sysex(invalid,sizeof invalid);assert(!gateway_shot_pending);control(0);

@@ -1,7 +1,7 @@
 FM Interface firmware for the M-VAVE FM-1.
 
 File: fm-interface.fwsc
-SHA-256: 4017b0dfbaf6f825f0c900732cc84b7a39e5195b8c87dd5b59d086481f409aec
+SHA-256: 0451a8d299e29fa46cfcca766d0f5368c2275c878e26a50f0649ea0810b9a4fe
 
 This image has been linked and checked on a host. It has not been flashed to a device.
 Spectrum together with aptX and full USB recording does not all fit at once; if a
@@ -16,5 +16,7 @@ Install with M-Flasher (https://github.com/jvitkauskas/m-flasher):
 5. Leave "Also erase settings and Bluetooth pairings" unchecked.
 6. If M-Flasher cannot see the running firmware, power on while holding REC, then flash.
 
-After it boots, USB audio is "FM1 Audio". SEL on the meters page opens the sequencer.
-PLAY on that page starts and stops the sequence. PLAY on every other page mutes the master.
+After it boots, USB audio is "FM1 Audio". SEQ opens the sequencer. ARP opens the arpeggiator.
+PLAY/STOP starts and stops MIDI clock and the sequence, and does not mute incoming audio.
+If the master was muted by the previous firmware, press PLAY once and the audio comes back.
+REC on the sequencer or arpeggiator captures MIDI and leaves the incoming audio running.

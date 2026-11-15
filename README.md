@@ -67,8 +67,10 @@ Press **EDIT** to open settings, use **SELECT** to scroll, **ALGORITHM** to chan
 Enable MIDI in settings.
 With USB connected, press **REC** to enter or leave MIDI mode. Encoders send absolute CCs (0–127) with gentle acceleration; keys send notes. **OCT−/OCT+** shift up to three octaves; press both to reset. Leaving MIDI saves encoder positions and octave shift for the next boot. **MASTER** keeps controlling audio.
 
-### Sequencer
-Press **SEL** on the Home visualizers to open the sequencer. **HOME** leaves it; playback keeps running. **PLAY** on this page starts and stops the sequence. On every other page **PLAY** still mutes the master.
+### Sequencer and arpeggiator
+Press **SEQ** to open the sequencer and **ARP** to open the arpeggiator. **HOME** leaves either page. **PLAY/STOP** starts and stops the sequence on every page and does not mute the incoming audio. If the master was muted, **PLAY** or **REC** turns it back on. Mute and solo stay on the mixer page.
+
+The sequencer and arpeggiator send USB MIDI on the channel chosen in Settings (channel 1 until you change it), plus MIDI clock, Start and Stop while the sequence runs.
 
 Four MIDI tracks share one clock. **SELECT** chooses the track. **K1** is BPM (40–240). **K2** is the step division. **K3** is the arpeggiator gate. **ALGORITHM** is the arpeggiator: OFF, UP, DN, UPDN, RND, ORD, REPEAT. **PRESETS** sets the loop to 16, 32 or 64 steps. **SEL** toggles arpeggiator hold. Keys play the selected track, and **OCT−/OCT+** shift them; press both to reset.
 

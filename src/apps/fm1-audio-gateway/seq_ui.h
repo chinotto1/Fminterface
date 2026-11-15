@@ -118,3 +118,49 @@ static int mus_ui_note(unsigned key)
     if (note > 127) note = 127;
     return note;
 }
+static void mus_ui_draw_arp(void)
+{
+    static const char *const mode[] = {"OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT"};
+    static const char *const divs[] = {"1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1/1", "2BAR", "4BAR"};
+    char line[40];
+    unsigned n, div = mus.arp_div < 10u ? mus.arp_div : 2u;
+    n = mus_ui_cat(line, 0, "ARP ");
+    mus_ui_cat(line, n, mode[mus.arp < 7u ? mus.arp : 0]);
+    draw_text_box(0, 28, 240, &FONT_T, line, C_WHITE, 0);
+    n = mus_ui_cat(line, 0, divs[div]);
+    n = mus_ui_cat(line, n, "   OCT ");
+    mus_ui_num(line, n, mus.aoct);
+    draw_text_box(0, 56, 240, &FONT_T, line, C_WHITE, 0);
+    n = mus_ui_cat(line, 0, "GATE ");
+    n = mus_ui_num(line, n, mus.agate * 100 / 128);
+    n = mus_ui_cat(line, n, mus.ahold ? "%   HOLD" : "%");
+    draw_text_box(0, 84, 240, &FONT_T, line, C_WHITE, 0);
+    draw_text_box(0, 120, 240, &FONT_T, "KEYS ARP TO MIDI", RGB(75, 210, 150), 0);
+    draw_text_box(0, 156, 240, &FONT_T, mus.playing ? "PLAY" : "STOP", mus.playing ? RGB(40, 220, 90) : C_WHITE, 0);
+    draw_text_box(0, 190, 240, &FONT_T, mus_message(), RGB(255, 212, 40), 0);
+}
+static void mus_ui_turn_arp(unsigned enc, int delta)
+{
+    if (!delta) return;
+    if (enc == EN_ALGO) {
+        int m = (int)mus.arp + (delta > 0 ? 1 : -1);
+        if (m < 0) m = 0;
+        if (m > 6) m = 6;
+        mus_arp_mode((uint32_t)m);
+    } else if (enc == EN_K1) {
+        int d = (int)mus.arp_div + (delta > 0 ? 1 : -1);
+        if (d < 0) d = 0;
+        if (d > 9) d = 9;
+        mus.arp_div = (uint8_t)d;
+    } else if (enc == EN_K2) {
+        int o = (int)mus.aoct + (delta > 0 ? 1 : -1);
+        if (o < 1) o = 1;
+        if (o > 4) o = 4;
+        mus_octaves((uint32_t)o);
+    } else if (enc == EN_K3) {
+        int g = (int)mus.agate + delta;
+        if (g < 1) g = 1;
+        if (g > 127) g = 127;
+        mus_gate((uint32_t)g);
+    }
+}

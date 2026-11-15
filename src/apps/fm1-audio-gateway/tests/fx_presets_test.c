@@ -141,7 +141,7 @@ int main(void){
  dialog_text();
  writes=store_writes;store_fail=0;now_ms+=6000;app_loop();
  assert(gateway_fx_dialog==1 && gateway_fx_notice==2 && store_writes==writes && gateway_fx_dirty);
- unsigned muted=gateway_muted;tap(B_PLAY);assert(gateway_muted!=muted && gateway_fx_dialog==1);tap(B_PLAY);assert(gateway_muted==muted);
+ unsigned muted=gateway_muted;tap(B_PLAY);assert(gateway_muted==muted && gateway_fx_dialog==1 && mus.playing);tap(B_PLAY);assert(gateway_muted==muted && !mus.playing);
  uint8_t slot=gateway_fx_selected[1];turn(EN_PRESET,1);tap(B_HOME);tap(B_SEL);tap(B_FX);
  assert(gateway_fx_dialog==1 && gateway_screen==GATEWAY_FX && gateway_fx_selected[1]==slot);
  gateway_view_changed();assert(gateway_fx_dialog==1); /* Codec/view refresh cannot confirm or discard the dialog. */

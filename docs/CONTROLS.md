@@ -11,8 +11,9 @@
 | FX | Open the last FX page; subsequent presses alternate EQ and limiter. |
 | Hold FX for 1 s | Toggle the complete master FX chain. |
 | SEL on an FX page | Toggle that individual effect; its LED is bright when enabled. |
-| SEL on Home | Open the sequencer. |
-| PLAY | Toggle MASTER mute. On the sequencer page, PLAY starts and stops the sequence instead. Green means unmuted, red means muted. |
+| SEQ | Open the sequencer. |
+| ARP | Open the arpeggiator. |
+| PLAY | Start and stop the sequence. It does not mute incoming audio. If the master was muted, PLAY turns it back on. |
 
 The shared status bar shows USB IN, Bluetooth/codec, FX and USB OUT state, with
 optional CPU and estimated battery percentage. Bluetooth is red disconnected,
@@ -24,7 +25,7 @@ it includes UI/LCD waits, rather than instruction utilization alone.
 
 ## Sequencer
 
-SEL on Home opens it. HOME leaves it; a running sequence keeps playing. PLAY on this page is transport. The master mute is still PLAY on every other page.
+SEQ opens the sequencer. ARP opens the arpeggiator. HOME leaves either page. PLAY starts and stops the sequence from any page and leaves incoming USB and Bluetooth audio running. REC on either musical page captures without muting that audio.
 
 SELECT chooses one of four MIDI tracks. K1 sets BPM from 40 to 240. K2 sets the step division. K3 sets the arpeggiator gate. ALGORITHM sets the arpeggiator to OFF, UP, DN, UPDN, RND, ORD or REPEAT. PRESETS cycles the loop through 16, 32 and 64 steps. SEL toggles arpeggiator hold. The keys play the selected track. OCT− and OCT+ shift by octaves, and both together reset.
 

@@ -115,10 +115,9 @@ int main(void)
         uint32_t peak[2];
         for(i=0;i<APP_BLOCK;i++){input[2*i]=-8388608;input[2*i+1]=4194304;}
         usb_play_buf=input;usb_play_n=APP_BLOCK;master=2048;usb_play_at=0;sim_render(output);plat_master_peaks(peak);
-        held_btn=1u<<B_PLAY;app_input_only();
-        assert(gateway_muted && master_fade_target==0 && (lit_btn & (1u<<B_PLAY)));
-        for(i=0;i<20;i++)app_input_only();assert(gateway_muted); /* one toggle per press */
-        held_btn=0;app_input_only();
+        gateway_mixer_toggle(3,0);
+        assert(gateway_muted && master_fade_target==0);
+        for(i=0;i<20;i++)app_input_only();assert(gateway_muted); /* holding nothing does not unmute */
         for(m=0;m<20;m++) {
             usb_play_at=0;sim_render(output);plat_master_peaks(peak);
             assert(peak[0]==265271 && peak[1]==132635); /* excludes the mute fade */

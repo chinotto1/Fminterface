@@ -11,7 +11,7 @@ static uint8_t gateway_screenshot_painting,gateway_shot_frozen;
 static struct {uint32_t cpu,cpu2,master;int raw;uint8_t usb,connected,pairing,codec;} gateway_shot_panel;
 static void gateway_screenshot_cancel(void);
 static uint8_t gateway_redraw, gateway_ui_ready, gateway_muted;
-enum { GATEWAY_MAIN, GATEWAY_SETTINGS, GATEWAY_FX, GATEWAY_MIXER, GATEWAY_SEQ };
+enum { GATEWAY_MAIN, GATEWAY_SETTINGS, GATEWAY_FX, GATEWAY_MIXER, GATEWAY_SEQ, GATEWAY_ARP };
 enum { GATEWAY_MODE_METERS, GATEWAY_MODE_FULL, GATEWAY_MODE_SPECTRUM, GATEWAY_MODE_VECTORSCOPE, GATEWAY_MODES };
 static uint8_t gateway_screen, gateway_mode, gateway_page_redraw, gateway_page_clear;
 static uint8_t gateway_fx_tracking,gateway_fx_held;
@@ -196,9 +196,9 @@ static int gateway_settings_unsaved(void)
 static void gateway_lights(void)
 {
     uint32_t home = 1u << B_HOME, edit = 1u << B_EDIT, fx = 1u << B_FX;
-    uint32_t active = gateway_screen == GATEWAY_MAIN ? home : gateway_screen==GATEWAY_SETTINGS ? edit : gateway_screen==GATEWAY_MIXER?1u<<B_GLO:gateway_screen==GATEWAY_SEQ?1u<<B_SEL:fx;
+    uint32_t active = gateway_screen == GATEWAY_MAIN ? home : gateway_screen==GATEWAY_SETTINGS ? edit : gateway_screen==GATEWAY_MIXER?1u<<B_GLO:gateway_screen==GATEWAY_SEQ?1u<<B_SEQ:gateway_screen==GATEWAY_ARP?1u<<B_ARP:fx;
     plat_glow(0);
-    plat_play_red(gateway_muted);
+    plat_play_red(0);
     uint32_t dim = (home | edit | fx) & ~active;
     gateway_midi_rec_on=(uint8_t)gateway_midi_rec_light(plat_ms());
     if(gateway_midi_mode){if(gateway_midi_rec_on)active|=1u<<B_REC;else dim|=1u<<B_REC;}
@@ -221,7 +221,7 @@ static void gateway_lights(void)
         gateway_midi_octave_on=(uint8_t)gateway_midi_octave_light(plat_ms());
         uint32_t bright=gateway_midi_octave_on?1u<<(gateway_midi_octave>0?B_OCTUP:B_OCTDN):0u;
         active=(active&~oct)|bright;dim=(dim&~oct)|(oct&~bright);
-    }else if (gateway_bt_mode && !gateway_fx_dialog && !gateway_codec_dialog && gateway_screen!=GATEWAY_SEQ) {
+    }else if (gateway_bt_mode && !gateway_fx_dialog && !gateway_codec_dialog && gateway_screen!=GATEWAY_SEQ && gateway_screen!=GATEWAY_ARP) {
         if (plat_bt_receiver_pairing()) active |= 1u << B_OCTUP;
         else dim |= 1u << B_OCTUP;
     }
@@ -229,7 +229,7 @@ static void gateway_lights(void)
     if(gateway_midi_active){
         keys=(gateway_keys | (gateway_midi_c?GATEWAY_MIDI_CS:0u)) & GATEWAY_MIDI_KEYS;
         dim_keys=GATEWAY_MIDI_KEYS & ~keys;
-    }else if(gateway_screen==GATEWAY_SEQ && !gateway_midi_active){
+    }else if((gateway_screen==GATEWAY_SEQ || gateway_screen==GATEWAY_ARP) && !gateway_midi_active){
         keys=gateway_keys & GATEWAY_MIDI_KEYS;
         dim_keys=GATEWAY_MIDI_KEYS & ~keys;
         {
@@ -242,7 +242,7 @@ static void gateway_lights(void)
         if(gateway_mixer_muted(g))keys|=m;else dim_keys|=m;
         if(gateway_mix_solos&(1u<<g))keys|=s;else dim_keys|=s;
     }
-    plat_lights((gateway_muted ? 1u << B_PLAY : LED_PLAY_GREEN) | active,
+    plat_lights(LED_PLAY_GREEN | active,
             keys, dim, dim_keys, 1);
     plat_lights_mid(0, 0);
 }
@@ -585,7 +585,8 @@ void app_input_only(void)
     uint32_t keys=plat_keys(),old_keys=gateway_keys,key_pressed=gateway_ui_ready?keys&~gateway_keys:0;gateway_keys=keys;
     uint32_t pressed = gateway_ui_ready ? buttons & ~gateway_buttons : 0;
     if(gateway_ui_ready){mus_poll(plat_ms());mus_channel(gateway_midi_channel);mus_flush();}
-    if(gateway_midi_mode && gateway_screen!=GATEWAY_SEQ && (pressed&(1u<<B_REC))){
+    if((pressed&(1u<<B_REC)) && gateway_muted){gateway_muted=0;gateway_mixer_publish();gateway_settings_changed();}
+    if(gateway_midi_mode && gateway_screen!=GATEWAY_SEQ && gateway_screen!=GATEWAY_ARP && (pressed&(1u<<B_REC))){
         if(gateway_midi_active)gateway_midi_exit();
         else if(plat_usb_connected()){
             gateway_midi_usb_error=0;gateway_midi_service();memcpy(gateway_midi_values,gateway_midi_resume,NE);
@@ -612,12 +613,12 @@ void app_input_only(void)
     if(gateway_shot_frozen && (buttons!=gateway_buttons || key_pressed || gateway_fx_tracking ||
             gateway_fx_save_tracking || gateway_oct_tracking))gateway_screenshot_cancel();
     if (pressed & (1u << B_PLAY)) {
-        if(gateway_screen==GATEWAY_SEQ){mus_play(!mus.playing);gateway_page_redraw=1;}
-        else{
-        plat_cpu_work_begin();
-        gateway_mixer_toggle(3,0);
-        plat_cpu_work_end();
-        }
+        /* Transport only. PLAY used to mute the master and cut the audio
+         * coming in from USB or Bluetooth. */
+        if(gateway_muted){gateway_muted=0;gateway_mixer_publish();gateway_settings_changed();}
+        mus_play(!mus.playing);
+        if(gateway_screen==GATEWAY_SEQ || gateway_screen==GATEWAY_ARP)gateway_page_redraw=1;
+        gateway_lights();
     }
     if(gateway_fx_dialog){
         gateway_oct_tracking=gateway_fx_save_tracking=0;
@@ -681,8 +682,12 @@ void app_input_only(void)
         if(gateway_screen!=GATEWAY_MIXER){gateway_screen=GATEWAY_MIXER;gateway_save_notice=0;gateway_view_changed();}
     } else if (pressed & (1u << B_FX)) {
         gateway_fx_tracking=1;gateway_fx_held=0;gateway_fx_press_ms=plat_ms();
+    } else if (pressed & (1u << B_SEQ)) {
+        mus_release_keys();mus.live_arp=0;gateway_screen=GATEWAY_SEQ;gateway_view_changed();
+    } else if (pressed & (1u << B_ARP)) {
+        mus_release_keys();if(!mus.arp)mus_arp_mode(1);mus.live_arp=1;gateway_screen=GATEWAY_ARP;gateway_view_changed();
     } else if (pressed & (1u << B_HOME)) {
-        if(gateway_screen==GATEWAY_SEQ)mus_release_keys();
+        if(gateway_screen==GATEWAY_SEQ || gateway_screen==GATEWAY_ARP){mus_release_keys();mus.live_arp=0;}
         if (gateway_screen == GATEWAY_MAIN) {
             uint8_t previous=gateway_mode;
             /* A graph that yielded scratch is visibly the meter page. Cycle
@@ -724,21 +729,16 @@ void app_input_only(void)
                 for(i=0;i<NE && !gateway_midi_active;i++)(void)plat_enc((int)i);gateway_buttons=buttons;return;}
         }
     }
-    int mus_ui_entered=0;
-    if(gateway_screen==GATEWAY_MAIN && !gateway_midi_active && !gateway_fx_dialog && !gateway_codec_dialog && (pressed&(1u<<B_SEL))){
-        gateway_screen=GATEWAY_SEQ;mus_ui_entered=1;gateway_view_changed();
-    }
-    if(gateway_screen==GATEWAY_SEQ && !gateway_midi_active){
+    if((gateway_screen==GATEWAY_SEQ || gateway_screen==GATEWAY_ARP) && !gateway_midi_active){
         uint32_t both=(1u<<B_OCTUP)|(1u<<B_OCTDN);
         if((buttons&both)==both && (pressed&both))mus_ui_oct=0;
         else if(pressed&(1u<<B_OCTUP)){if(mus_ui_oct<3)mus_ui_oct++;}
         else if(pressed&(1u<<B_OCTDN)){if(mus_ui_oct>-3)mus_ui_oct--;}
-        if(!mus_ui_entered && (pressed&(1u<<B_SEL))){mus_hold(!mus.ahold);gateway_page_redraw=1;}
-        if(pressed&(1u<<B_REC)){mus_ui_rec=1;mus_ui_rec_done=0;mus_ui_rec_ms=plat_ms();}
-        if(mus_ui_rec && (buttons&(1u<<B_REC)) && !mus_ui_rec_done && plat_ms()-mus_ui_rec_ms>=700u){
-            mus_capture_at(mus_ui_rec_ms);mus_ui_rec_done=1;gateway_page_redraw=1;app_say(mus_message(),"");
+        if(pressed&(1u<<B_SEL)){mus_hold(!mus.ahold);gateway_page_redraw=1;}
+        if(pressed&(1u<<B_REC)){
+            if(gateway_muted){gateway_muted=0;gateway_mixer_publish();gateway_settings_changed();}
+            mus_capture_at(plat_ms());gateway_page_redraw=1;app_say(mus_message(),"");
         }
-        if(!(buttons&(1u<<B_REC)))mus_ui_rec=mus_ui_rec_done=0;
         if(mus_ui_edit && (buttons&(1u<<B_EDIT)) && !mus_ui_edit_done && plat_ms()-mus_ui_edit_ms>=700u){
             mus_undo();mus_ui_edit_done=1;gateway_page_redraw=1;app_say(mus_message(),"");
         }
@@ -752,8 +752,9 @@ void app_input_only(void)
             if((old_keys&~keys)&(1u<<key))mus_note((uint32_t)note,0,0);
         }
         if(key_pressed || (old_keys^keys))gateway_lights();
+        mus_flush();
     }
-    if (gateway_bt_mode && gateway_ui_ready && !gateway_midi_active && gateway_screen!=GATEWAY_SEQ) {
+    if (gateway_bt_mode && gateway_ui_ready && !gateway_midi_active && gateway_screen!=GATEWAY_SEQ && gateway_screen!=GATEWAY_ARP) {
         if (pressed & (1u << B_OCTUP)) {
             gateway_oct_ms = plat_ms(); gateway_oct_tracking = 1; gateway_oct_fired = 0;
             if (plat_bt_receiver_pairing()) {
@@ -782,8 +783,10 @@ void app_input_only(void)
         if(gateway_screen==GATEWAY_MIXER && delta){gateway_mixer_turn(i,delta);}
         else if(gateway_screen==GATEWAY_FX && delta) {
             gateway_fx_turn(i,delta);
-        } else if(gateway_screen==GATEWAY_SEQ && delta) {
+        }         else if(gateway_screen==GATEWAY_SEQ && delta) {
             mus_ui_turn(i,delta);gateway_page_redraw=1;
+        } else if(gateway_screen==GATEWAY_ARP && delta) {
+            mus_ui_turn_arp(i,delta);gateway_page_redraw=1;
         } else if (gateway_screen == GATEWAY_SETTINGS && delta) {
             if (i == EN_SELECT) {
                 if(delta>GATEWAY_SETTING_ROWS)delta=GATEWAY_SETTING_ROWS;
@@ -1279,11 +1282,14 @@ void app_loop(void)
         else if(gateway_screen==GATEWAY_FX)gateway_fx_draw();
         else if(gateway_screen==GATEWAY_MIXER)gateway_mixer_draw(1);
         else if(gateway_screen==GATEWAY_SEQ)mus_ui_draw();
+        else if(gateway_screen==GATEWAY_ARP)mus_ui_draw_arp();
         else gateway_settings_draw();
         gateway_page_redraw = 0;
         plat_cpu_work_end();
     }else if(gateway_screen==GATEWAY_SEQ && mus_ui_moved()){
         plat_cpu_work_begin();mus_ui_draw();plat_cpu_work_end();
+    }else if(gateway_screen==GATEWAY_ARP && mus_ui_moved()){
+        plat_cpu_work_begin();mus_ui_draw_arp();plat_cpu_work_end();
     }
     if(gateway_screen==GATEWAY_FX && gateway_fx_limiter && !gateway_fx_dialog && now-gateway_fx_draw_ms>=48u) {
         plat_cpu_work_begin();gateway_fx_status();plat_cpu_work_end();

@@ -77,9 +77,9 @@ static void controls(void){
         held_keys=0;app_input_only();assert(lit_keys&(1u<<mute_keys[i]));
         key(solo_keys[i]);assert(gateway_mix_solos&(1u<<i));assert(lit_keys&(1u<<solo_keys[i]));
     }
-    assert(gateway_muted && (lights_b&(1u<<B_PLAY)) && !(lights_b&LED_PLAY_GREEN));
-    tap(B_PLAY);assert(!gateway_muted && !gateway_mixer_muted(3) && (dim_keys&(1u<<6)) && (lights_b&LED_PLAY_GREEN));
-    key(6);assert(gateway_muted && (lights_b&(1u<<B_PLAY)));key(6);assert(!gateway_muted);
+    assert(gateway_muted && (lights_b&LED_PLAY_GREEN));
+    tap(B_PLAY);assert(!gateway_muted && mus.playing && (dim_keys&(1u<<6)));
+    key(6);assert(gateway_muted);key(6);assert(!gateway_muted);
     tap(B_HOME);assert(!lit_keys && !dim_keys);
     unsigned m=gateway_mix_mutes,s=gateway_mix_solos;key(0);key(12);assert(m==gateway_mix_mutes && s==gateway_mix_solos);
     held_keys=1u;app_input_only();tap(B_GLO);assert(gateway_mix_mutes==m);held_keys=0;app_input_only();

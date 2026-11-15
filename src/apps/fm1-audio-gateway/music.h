@@ -35,7 +35,8 @@ static struct {
     uint16_t len[MUS_TRACKS];
     uint8_t div[MUS_TRACKS];
     uint8_t sel, playing, just, free, clock_ext, armed, clock_set;
-    uint8_t arp, ahold, aoct, agate, aswing;
+    uint8_t arp, ahold, aoct, agate, aswing, arp_div, live_arp;
+    uint32_t clock_pos;
     uint8_t nheld, phys, arp_have, arp_note, live_n;
     uint8_t held[16], live[16];
     uint8_t seq_on[MUS_TRACKS][MUS_REC];
@@ -139,12 +140,17 @@ static void mus_seq_silence(void)
         mus.seq_on[k][i] = 0;
     }
 }
+static void mus_rt(uint32_t status)
+{
+    mus_push(0x0Fu | (status << 8));
+}
 static void mus_stop(void)
 {
     if (!mus.playing) { mus_arp_silence(); return; }
     mus.playing = 0;
     mus.just = 0;
     mus_seq_silence();
+    mus_rt(0xFCu);
 }
 static void mus_play(int on)
 {
@@ -153,9 +159,11 @@ static void mus_play(int on)
     mus.playing = 1;
     mus.pos = 0;
     mus.just = 1;
+    mus.clock_pos = 0;
     mus.cap_from = mus.cap_w;
     mus.free = 0;
     memset(mus.seq_on, 0, sizeof mus.seq_on);
+    mus_rt(0xFAu);
 }
 static uint32_t mus_now_q(uint32_t track)
 {
@@ -269,11 +277,12 @@ static void mus_arp_advance(uint32_t n)
         if (mus.arp_off <= n) mus_arp_silence();
         else mus.arp_off -= n;
     }
-    if (!mus.arp || !mus.nheld) {
+    unsigned mode = mus.arp;
+    if (!mode || !mus.nheld) {
         if (!mus.nheld && mus.arp_have) mus_arp_silence();
         return;
     }
-    period = mus_step_units(mus.div[mus.sel]);
+    period = mus_step_units(mus.arp_div < 10u ? mus.arp_div : 2u);
     sw = (uint32_t)mus.aswing * period / 250u;
     mus.arp_pos += n;
     for (;;) {
@@ -287,7 +296,7 @@ static void mus_arp_advance(uint32_t n)
         len = 0;
         for (i = 0; i < mus.nheld; i++) list[i] = mus.held[i];
         cnt = mus.nheld;
-        if (mus.arp != 5u) for (i = 1; i < cnt; i++) for (j = i; j > 0 && list[j - 1] > list[j]; j--) {
+        if (mode != 5u) for (i = 1; i < cnt; i++) for (j = i; j > 0 && list[j - 1] > list[j]; j--) {
             uint32_t x = list[j]; list[j] = list[j - 1]; list[j - 1] = x;
         }
         for (o = 0; o < mus.aoct; o++) for (i = 0; i < cnt && len < 64u; i++) {
@@ -295,9 +304,9 @@ static void mus_arp_advance(uint32_t n)
             if (pitched < 128u) list[len++] = pitched;
         }
         if (!len) return;
-        if (mus.arp == 6u) { list[0] = mus.held[mus.nheld - 1u]; len = 1; }
+        if (mode == 6u) { list[0] = mus.held[mus.nheld - 1u]; len = 1; }
         mus.arp_idx++;
-        switch (mus.arp) {
+        switch (mode) {
         case 2: j = len - 1u - mus.arp_idx % len; break;
         case 3: {
             uint32_t cyc = len > 1u ? 2u * len - 2u : 1u, p = mus.arp_idx % cyc;
@@ -358,6 +367,11 @@ static void mus_advance(uint32_t dms)
     prev = mus.pos;
     if (mus.playing && units) {
         mus.pos = prev + units;
+        mus.clock_pos += units;
+        while (mus.clock_pos >= MUS_BEAT / 24u) {
+            mus.clock_pos -= MUS_BEAT / 24u;
+            mus_rt(0xF8u);
+        }
         for (uint32_t k = 0; k < MUS_TRACKS; k++) mus_seq_track(k, prev, mus.pos);
         mus.just = 0;
     }
@@ -554,6 +568,7 @@ static void mus_init(void)
     mus.bpm = 120;
     mus.aoct = 1;
     mus.agate = 64;
+    mus.arp_div = 2;
     mus_rng_state = 1;
     for (uint32_t k = 0; k < MUS_TRACKS; k++) { mus.len[k] = 16; mus.div[k] = 2; }
     mus_say("HOLD REC TO CAPTURE");

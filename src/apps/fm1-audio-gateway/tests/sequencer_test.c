@@ -19,13 +19,19 @@ int main(void)
 {
     uint8_t step; uint16_t on; uint32_t dur;
     now_ms=10000;app_init();app_ui_init();app_loop();
-    tap(B_SEL);assert(gateway_screen==GATEWAY_SEQ && !gateway_muted);
+    tap(B_SEQ);assert(gateway_screen==GATEWAY_SEQ && !gateway_muted);
     tap(B_PLAY);assert(mus.playing && !gateway_muted);
     tap(B_PLAY);assert(!mus.playing && !gateway_muted);
     tap(B_HOME);assert(gateway_screen==GATEWAY_MAIN);
-    tap(B_PLAY);assert(gateway_muted && gateway_screen==GATEWAY_MAIN);
-    tap(B_PLAY);assert(!gateway_muted);
-    tap(B_SEL);assert(gateway_screen==GATEWAY_SEQ);
+    gateway_muted=1;gateway_mixer_publish();
+    tap(B_PLAY);assert(!gateway_muted && mus.playing && gateway_screen==GATEWAY_MAIN);
+    tap(B_PLAY);assert(!gateway_muted && !mus.playing);
+    tap(B_ARP);assert(gateway_screen==GATEWAY_ARP && mus.arp==1);
+    now_ms+=1;key_at(0,1);now_ms+=1;app_loop();
+    assert(mus.arp_have);
+    key_at(0,0);mus_arp_mode(0);
+    tap(B_SEQ);assert(gateway_screen==GATEWAY_SEQ && !mus.arp);
+    mus_init();
     enc_acc[EN_K1]=-20;app_input_only();assert(mus.bpm==100);
     phrase();
     held_btn=1u<<B_REC;app_input_only();
