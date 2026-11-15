@@ -68,20 +68,22 @@ Enable MIDI in settings.
 With USB connected, press **REC** to enter or leave MIDI mode. Encoders send absolute CCs (0–127) with gentle acceleration; keys send notes. **OCT−/OCT+** shift up to three octaves; press both to reset. Leaving MIDI saves encoder positions and octave shift for the next boot. **MASTER** keeps controlling audio.
 
 ### Sequencer and arpeggiator
-Press **SEQ** to open the sequencer and **ARP** to open the arpeggiator. **HOME** leaves either page. **PLAY/STOP** starts and stops the sequence on every page and does not mute the incoming audio. If the master was muted, **PLAY** or **REC** turns it back on. Mute and solo stay on the mixer page.
+Press **SEQ** to open NOTES, the piano roll. Press it again for STEPS, PATTERN, then TEMPO. **ARP** opens the arpeggiator. **HOME** leaves either page. **PLAY/STOP** starts and stops the sequence on every page and does not mute the incoming audio. If the master was muted, **PLAY** or **REC** turns it back on. Mute and solo stay on the mixer page.
+
+The roll shows 16 steps, and PATTERN extends the loop to 1, 2 or 4 bars (16, 32 or 64 steps). Stopped, on NOTES or STEPS, a key or chord writes the cursor step and releasing the keys advances. While playing, the keys only play. On PATTERN, TEMPO and ARP the keys play freely.
 
 The sequencer and arpeggiator send USB MIDI on the channel chosen in Settings (channel 1 until you change it), plus MIDI clock, Start and Stop while the sequence runs.
 
-Four MIDI tracks share one clock. **SELECT** chooses the track. **K1** is BPM (40–240). **K2** is the step division. **K3** is the arpeggiator gate. **ALGORITHM** is the arpeggiator: OFF, UP, DN, UPDN, RND, ORD, REPEAT. **PRESETS** sets the loop to 16, 32 or 64 steps. **SEL** toggles arpeggiator hold. Keys play the selected track, and **OCT−/OCT+** shift them; press both to reset.
+Four MIDI tracks share one clock. **SELECT** chooses the track. On TEMPO, **K1** is BPM (40–240). On NOTES, **K1** and **PRESETS** move the step and **K2** changes pitch. **ALGORITHM** is the arpeggiator: OFF, UP, DN, UPDN, RND, ORD, REPEAT. **SEL** toggles arpeggiator hold. **OCT−/OCT+** shift the keys; press both to reset. A short **EDIT** on NOTES or STEPS clears the cursor step.
 
 Notes leave on USB MIDI. Track 1 uses the MIDI channel from Settings; each next track uses the next channel.
 
-Hold **REC** for about 0.7 seconds to capture:
+Press **REC** to capture:
 
 - **Stopped, empty pattern:** this is the free take from Melodee nightly `3fe570d`. Play in your own time, then hold **REC** on the next downbeat. The press ends the loop and it plays from the top. If the other tracks are empty, the tempo moves to the nearest BPM that makes the phrase 1, 2 or 4 bars. Within 3% of the current BPM it stays. One note, a press long after the last note, or notes already on another track keep the current tempo and the played timing. A rest longer than 8 seconds starts the phrase over. An external clock or an armed track does not take a tempo from what you played.
 - **While the sequence is playing:** the last 1, 2 or 4 bars are written in. A pattern that already has notes keeps its length and records over that window.
 
-Hold **EDIT** to undo the capture. A short **EDIT** opens Settings. The captured loop is kept in RAM until power-off.
+Hold **EDIT** to undo the capture. A short **EDIT** on NOTES or STEPS clears the cursor step; on PATTERN or TEMPO it opens Settings. The captured loop is kept in RAM until power-off.
 
 ### Visualizers
 Press **HOME** to open visualizers screen and cycle through different visualizers.

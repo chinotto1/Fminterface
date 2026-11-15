@@ -627,6 +627,40 @@ static int mus_step_used(uint32_t track, uint32_t step)
     for (uint32_t i = 0; i < MUS_REC; i++) if (mus.note[track][i].used && mus.note[track][i].step == step) return 1;
     return 0;
 }
+static void mus_step_clear(uint32_t track, uint32_t step)
+{
+    if (track >= MUS_TRACKS) return;
+    for (uint32_t i = 0; i < MUS_REC; i++)
+        if (mus.note[track][i].used && mus.note[track][i].step == step)
+            mus.note[track][i].used = 0;
+}
+static int mus_step_put(uint32_t track, uint32_t step, uint32_t note, uint32_t vel, uint32_t dur)
+{
+    uint32_t i, n = 0;
+    if (track >= MUS_TRACKS || step > 63u || note > 127u) return 0;
+    for (i = 0; i < MUS_REC; i++) {
+        mus_note_t *e = &mus.note[track][i];
+        if (!e->used || e->step != step) continue;
+        if (e->note == note) return 1;
+        n++;
+    }
+    if (n >= 4u) return 0;
+    if (!dur) dur = MUS_UNIT;
+    for (i = 0; i < MUS_REC; i++) if (!mus.note[track][i].used) {
+        mus.note[track][i] = (mus_note_t){(uint8_t)note, (uint8_t)(vel ? vel : 1u), (uint8_t)step, 1, 0, dur};
+        return 1;
+    }
+    return 0;
+}
+static int mus_step_pitch(uint32_t track, uint32_t step, uint8_t *note)
+{
+    for (uint32_t i = 0; i < MUS_REC; i++)
+        if (mus.note[track][i].used && mus.note[track][i].step == step) {
+            if (note) *note = mus.note[track][i].note;
+            return 1;
+        }
+    return 0;
+}
 static uint32_t mus_playhead(void)
 {
     uint32_t su = mus_step_units(mus.div[mus.sel]);
