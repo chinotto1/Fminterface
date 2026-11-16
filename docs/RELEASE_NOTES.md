@@ -1,0 +1,2 @@
+- Vectorscope visualizer
+- Auto scale now applies to all i/o

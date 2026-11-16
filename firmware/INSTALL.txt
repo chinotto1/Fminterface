@@ -1,0 +1,28 @@
+FM Interface firmware for the M-VAVE FM-1.
+
+File: fm-interface.fwsc
+SHA-256: 99da3a01c2490462b1e2fd7f8d70a4ad4ec454980ae6edd2dba690857fe47561
+
+This image has been linked and checked on a host. It has not been flashed to a device.
+Spectrum together with aptX and full USB recording does not all fit at once; if a
+graph cannot allocate, the screen falls back to meters. Audio and the sequencer still run.
+
+Install with M-Flasher (https://github.com/jvitkauskas/m-flasher):
+1. Use a data USB cable. Do not unplug or power off during the write.
+2. If the FM-1 is still on stock M-VAVE firmware, install m-bootloader first.
+   Audio Router, Melodee, Felucca, and other fm1-base firmwares already have it.
+3. Select fm-interface.fwsc.
+4. Keep bootloader replacement OFF. Do not erase the whole chip.
+5. Leave "Also erase settings and Bluetooth pairings" unchecked.
+6. If M-Flasher cannot see the running firmware, power on while holding REC, then flash.
+
+After it boots, USB audio is "FM1 Audio". SEQ opens NOTES, the piano roll. Press SEQ
+again for STEPS, PATTERN, then TEMPO. PATTERN sets 1, 2 or 4 bars. Stopped, on NOTES
+or STEPS, a key or chord writes the cursor step and releasing the keys moves on.
+Hold SEQ and press OCT- to clear every track. Hold EDIT to undo that clear.
+On STEPS, SELECT moves between bars. Hold SEQ and play a key to change that step's note.
+ARP knobs are K1 mode, K2 rate, K3 octaves and K4 gate.
+ARP opens the arpeggiator. PLAY/STOP starts and stops MIDI clock and the sequence,
+and does not mute incoming audio. If the master was muted by the previous firmware,
+press PLAY once and the audio comes back. REC on a musical page captures MIDI and
+leaves the incoming audio running. A free take is played on PATTERN, TEMPO or ARP.
