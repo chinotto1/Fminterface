@@ -373,6 +373,7 @@ static void mus_arp_advance(uint32_t n)
          * Zero swing keeps every step exactly one division. */
         int32_t adj = (mus.arp_idx & 1u) ? (int32_t)sw : -(int32_t)sw;
         uint32_t limit = (uint32_t)((int32_t)period + adj);
+        if (!limit) limit = 1;
         if (mus.arp_pos < limit && mus.arp_pos != 0xFFFFFFFu + n) return;
         if (mus.arp_pos >= 0xFFFFFFFu) mus.arp_pos = 0;
         else mus.arp_pos -= limit;
@@ -443,6 +444,20 @@ static void mus_arp_advance(uint32_t n)
         mus_arp_strike(&list[j], 1, period);
     }
 }
+/* The AC79 corrupts a register when a 64-bit multiply is inlined next to a 16-bit load
+ * (felucca-bsp docs/CPU.md). These stay out of line so playback still emits MIDI. */
+static uint32_t mus_mul_div(uint32_t a, uint32_t b) __attribute__((noinline));
+static uint32_t mus_mul_div(uint32_t a, uint32_t b)
+{
+    return (uint32_t)(((uint64_t)a * b) / MUS_UNIT);
+}
+static uint32_t mus_beat_units(uint32_t dms, uint32_t bpm, uint32_t rem_in, uint32_t *rem_out) __attribute__((noinline));
+static uint32_t mus_beat_units(uint32_t dms, uint32_t bpm, uint32_t rem_in, uint32_t *rem_out)
+{
+    uint64_t ticks = (uint64_t)dms * bpm * MUS_BEAT + rem_in;
+    *rem_out = (uint32_t)(ticks % 60000u);
+    return (uint32_t)(ticks / 60000u);
+}
 static int mus_hit(uint32_t a, uint32_t b, uint32_t point) { return a < point && point <= b; }
 static void mus_seq_track(uint32_t k, uint32_t prev, uint32_t now)
 {
@@ -453,8 +468,8 @@ static void mus_seq_track(uint32_t k, uint32_t prev, uint32_t now)
         int just = mus.just && a == 0;
         for (i = 0; i < MUS_REC; i++) if (mus.note[k][i].used) {
             mus_note_t *e = &mus.note[k][i];
-            uint32_t start = (uint32_t)e->step * su + (uint32_t)((uint64_t)e->on * su / MUS_UNIT);
-            uint32_t gate = (uint32_t)((uint64_t)e->dur * su / MUS_UNIT);
+            uint32_t start = (uint32_t)e->step * su + mus_mul_div(e->on, su);
+            uint32_t gate = mus_mul_div(e->dur, su);
             uint32_t end;
             if (!gate) gate = 1;
             end = start + gate;
@@ -473,13 +488,11 @@ static void mus_seq_track(uint32_t k, uint32_t prev, uint32_t now)
 }
 static void mus_advance(uint32_t dms)
 {
-    uint32_t prev, units;
-    uint64_t ticks;
+    uint32_t prev, units, rem;
     if (!dms) return;
     if (dms > 1000u && mus.playing) dms = 1000u;
-    ticks = (uint64_t)dms * mus.bpm * MUS_BEAT + mus.rem;
-    mus.rem = (uint32_t)(ticks % 60000u);
-    units = (uint32_t)(ticks / 60000u);
+    units = mus_beat_units(dms, mus.bpm, mus.rem, &rem);
+    mus.rem = rem;
     prev = mus.pos;
     if (mus.playing && units) {
         mus.pos = prev + units;

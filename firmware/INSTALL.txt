@@ -1,7 +1,7 @@
 FM Interface firmware for the M-VAVE FM-1.
 
 File: fm-interface.fwsc
-SHA-256: 79c763c99aeea47f77bb0f04637ccd0840d6e058966ce77d0175940318fd8629
+SHA-256: 99da3a01c2490462b1e2fd7f8d70a4ad4ec454980ae6edd2dba690857fe47561
 
 This image has been linked and checked on a host. It has not been flashed to a device.
 Spectrum together with aptX and full USB recording does not all fit at once; if a
